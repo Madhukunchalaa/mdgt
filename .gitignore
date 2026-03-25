@@ -18,4 +18,6 @@ meil_frontend/.env*
 
 # Misc
 *.zip
-uploads/
+# uploads/ is a Django app — do not ignore it
+# Ignore only uploaded media files inside it:
+meil_backend/uploads/media/
