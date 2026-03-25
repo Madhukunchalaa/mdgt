@@ -1,0 +1,21 @@
+# Python / Django
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+db.sqlite3
+*.log
+*.pot
+*.mo
+.env
+
+# Node / Next.js
+meil_frontend/node_modules/
+meil_frontend/.next/
+meil_frontend/.env*
+
+# Misc
+*.zip
+uploads/
