@@ -118,11 +118,11 @@ ASGI_APPLICATION = 'core.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
+        'NAME': 'railway',
         'USER': 'postgres',
-        'PASSWORD': '123',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'PASSWORD': 'eGBurQINWpJTORApayABDxxZXPoZNNOd',
+        'HOST': 'ballast.proxy.rlwy.net',
+        'PORT': '19547',
     }
 }
 SIMPLE_JWT = {
