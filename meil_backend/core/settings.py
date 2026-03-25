@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-)i^kgz81m+5b&kwqf6dx#l@e0_uoej_0ft(##uh(z(4aa=-q91
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["*", "localhost", "127.0.0.1", "mdgt-production.up.railway.app", "intuitive-dream-production.up.railway.app"]
 
 # AUTH_USER_MODEL = "Users.Employee"
 
@@ -91,6 +91,10 @@ MIDDLEWARE = [
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://intuitive-dream-production.up.railway.app",
+    "http://localhost:3000",
+]
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
