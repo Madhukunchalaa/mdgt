@@ -91,10 +91,6 @@ MIDDLEWARE = [
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "https://intuitive-dream-production.up.railway.app",
-    "http://localhost:3000",
-]
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
