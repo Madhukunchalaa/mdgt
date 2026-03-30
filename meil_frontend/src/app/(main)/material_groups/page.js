@@ -180,7 +180,7 @@ export default function MaterialGroupsPage() {
       await loadMaterialGroups();
       handleCloseModal();
     } catch (err) {
-      setError("Failed to save material group: " + (err.message || "Unknown error"));
+      setError("Failed to save material group: " + (err.response?.data?.error || err.message || "Unknown error"));
       console.error("Error saving material group:", err);
     } finally {
       setSaving(false);
@@ -198,7 +198,7 @@ export default function MaterialGroupsPage() {
         await deleteMaterialGroup(token, mgrp_code);
         await loadMaterialGroups();
       } catch (err) {
-        setError("Failed to delete material group: " + (err.message || "Unknown error"));
+        setError("Failed to delete material group: " + (err.response?.data?.error || err.message || "Unknown error"));
         console.error("Error deleting material group:", err);
       }
     }

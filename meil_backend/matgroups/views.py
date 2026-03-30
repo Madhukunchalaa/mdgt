@@ -200,17 +200,18 @@ def update_matgroup(request, mgrp_code):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
-# ✅ HARD DELETE MatGroup
+# ✅ SOFT DELETE MatGroup
 @csrf_exempt
 @authenticate
 # @restrict(roles=["Admin", "SuperAdmin","MDGT"])
 def delete_matgroup(request, mgrp_code):
     if request.method == "DELETE":
-        matgroup = MatGroup.objects.filter(mgrp_code=mgrp_code).first()
+        matgroup = MatGroup.objects.filter(mgrp_code=mgrp_code, is_deleted=False).first()
         if not matgroup:
             return JsonResponse({"error": "MatGroup not found"}, status=404)
 
-        matgroup.delete()  # ✅ Hard delete
+        matgroup.is_deleted = True
+        matgroup.save()
         return JsonResponse({"message": "MatGroup deleted successfully"}, status=200)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
