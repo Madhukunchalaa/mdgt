@@ -6,7 +6,8 @@ import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
 
 export default function MaterialDetailPage() {
-  const { slug } = useParams();
+  const { slug: rawSlug } = useParams();
+  const slug = rawSlug ? decodeURIComponent(rawSlug) : rawSlug;
   const router = useRouter();
   const { token } = useAuth(); // Move useAuth before useEffect that uses token
   const [selectedItem, setSelectedItem] = useState(null);

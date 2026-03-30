@@ -26,10 +26,9 @@ def search_groups(request):
     if not query:
         return Response({"error": "Field 'query' is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Base queryset with search_type filter and only groups with final items
+    # Base queryset with search_type filter
     base_qs = MatGroup.objects.filter(
         is_deleted=False,
-        items__is_final=True,
         items__is_deleted=False
     ).distinct()
     if search_type:
@@ -281,7 +280,6 @@ def items_by_group(request, group_code):
     items = ItemMaster.objects.filter(
         mgrp_code=group_code,
         is_deleted=False,
-        is_final=True
     )
 
     if query:
@@ -335,7 +333,6 @@ def items_by_group_and_type(request, group_code, mat_type_code):
         mgrp_code=group_code,
         mat_type_code=mat_type_code,
         is_deleted=False,
-        is_final=True
     )
 
     if query:

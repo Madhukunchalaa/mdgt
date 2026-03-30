@@ -10,10 +10,12 @@ import {
   deleteValidationList
 } from "../../../lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useSortableData } from "@/hooks/useSortableData";
 import BackButton from "@/components/BackButton";
 
 export default function ValidationListsPage() {
   const [validationLists, setValidationLists] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingList, setEditingList] = useState(null);
@@ -45,12 +47,16 @@ export default function ValidationListsPage() {
     loadValidationLists();
   }, [token]);
 
+  useEffect(() => {
+    if (token) loadValidationLists();
+  }, [showDeleted]);
+
   const loadValidationLists = async () => {
     try {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem("token");
-      const data = await fetchValidationLists(token);
+      const data = await fetchValidationLists(token, showDeleted);
       setValidationLists(data);
     } catch (err) {
       setError("Failed to load validation lists: " + (err.response?.data?.error || err.message));
@@ -69,11 +75,13 @@ export default function ValidationListsPage() {
     return matchesSearch;
   });
 
+  const { sortedData: sortedValidationLists, requestSort, getSortIcon } = useSortableData(filteredValidationLists);
+
   // Pagination logic
-  const totalPages = Math.ceil(filteredValidationLists.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedValidationLists.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentValidationLists = filteredValidationLists.slice(startIndex, endIndex);
+  const currentValidationLists = sortedValidationLists.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -203,6 +211,13 @@ export default function ValidationListsPage() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Trash2 size={14} className="mr-1.5" />
+              {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+            </button>
             {checkPermission("validation", "create") && (
               <button
                 onClick={handleAddNew}
@@ -244,10 +259,10 @@ export default function ValidationListsPage() {
         {/* Table Header */}
         <thead className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white">
           <tr>
-            <th className="px-6 py-3 text-left text-sm font-semibold uppercase">List Name</th>
+            <th className="px-6 py-3 text-left text-sm font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('listname')}>List Name{getSortIcon('listname')}</th>
             <th className="px-6 py-3 text-left text-sm font-semibold uppercase">Values</th>
-            <th className="px-6 py-3 text-left text-sm font-semibold uppercase">Created</th>
-            <th className="px-6 py-3 text-left text-sm font-semibold uppercase">Updated</th>
+            <th className="px-6 py-3 text-left text-sm font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('created')}>Created{getSortIcon('created')}</th>
+            <th className="px-6 py-3 text-left text-sm font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('updated')}>Updated{getSortIcon('updated')}</th>
             <th className="px-6 py-3 text-left text-sm font-semibold uppercase">Actions</th>
           </tr>
         </thead>
@@ -258,13 +273,14 @@ export default function ValidationListsPage() {
             currentValidationLists.map((list, index) => (
               <tr
                 key={list.list_id}
-                className={`transition-all duration-200 ${
-                  index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
-                } hover:bg-purple-50`}
+                className={`transition-all duration-200 ${list.is_deleted ? 'bg-red-50 opacity-75' : index % 2 === 0 ? "bg-gray-50 hover:bg-purple-50" : "bg-gray-100 hover:bg-purple-50"}`}
               >
                 <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                  <div className="inline-block px-2 py-1 bg-purple-100 text-purple-800 rounded-lg shadow-sm">
-                    {list.listname}
+                  <div className="flex items-center gap-2">
+                    <div className="inline-block px-2 py-1 bg-purple-100 text-purple-800 rounded-lg shadow-sm">
+                      {list.listname}
+                    </div>
+                    {list.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
@@ -324,8 +340,8 @@ export default function ValidationListsPage() {
           <div>
             <p className="text-sm text-gray-700">
               Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-              <span className="font-medium">{Math.min(endIndex, filteredValidationLists.length)}</span> of{' '}
-              <span className="font-medium">{filteredValidationLists.length}</span> results
+              <span className="font-medium">{Math.min(endIndex, sortedValidationLists.length)}</span> of{' '}
+              <span className="font-medium">{sortedValidationLists.length}</span> results
             </p>
           </div>
           <div>

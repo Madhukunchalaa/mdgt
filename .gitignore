@@ -1,23 +1,27 @@
 # Python / Django
-venv/
-__pycache__/
+meil_backend/venv/
+meil_backend/__pycache__/
+meil_backend/**/__pycache__/
+meil_backend/**/*.pyc
+meil_backend/staticfiles/
+meil_backend/db.sqlite3
+meil_backend/datadump.json
+meil_backend/.DS_Store
 *.pyc
 *.pyo
-*.pyd
-*.db
-db.sqlite3
-*.log
-*.pot
-*.mo
-.env
 
-# Node / Next.js
-meil_frontend/node_modules/
+# Next.js
 meil_frontend/.next/
-meil_frontend/.env*
+meil_frontend/node_modules/
+meil_frontend/.env.local
+meil_frontend/.env*.local
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Misc
 *.zip
-# uploads/ is a Django app — do not ignore it
-# Ignore only uploaded media files inside it:
-meil_backend/uploads/media/
+*.xlsx
+*.docx
+~$*

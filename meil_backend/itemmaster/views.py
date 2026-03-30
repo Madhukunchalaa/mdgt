@@ -2,6 +2,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from django.db import IntegrityError
 
 from .models import ItemMaster
 from Employee.models import Employee
@@ -15,24 +16,30 @@ from Common.Middleware import authenticate, restrict
 def get_employee_name(emp):
     return emp.emp_name if emp else None
 
-# Helper function to format attributes as key:value pairs for short_name
-def format_attributes_for_short_name(attributes):
-    """Format attributes dictionary as 'key: value, key: value' string"""
-    if not attributes or not isinstance(attributes, dict):
-        return ""
-    pairs = [f"{k}: {v}" for k, v in attributes.items() if v]  # Only include non-empty values
-    return ", ".join(pairs)
-
-# Helper function to format long_name with mgrp_code, mgrp_long_name, short_name
-def format_long_name(mgrp_code, mgrp_long_name, short_name):
-    """Format long_name as 'mgrp_code, mgrp_long_name, short_name'"""
+# Helper function to format short_name: SAP Description + attribute values
+def format_short_name(sap_name, attributes):
+    """Format short_name as 'SAP Description, val1, val2' """
     parts = []
+    if sap_name:
+        parts.append(str(sap_name))
+    if attributes and isinstance(attributes, dict):
+        attr_vals = [str(v) for v in attributes.values() if v]
+        parts.extend(attr_vals)
+    return ", ".join(parts)
+
+# Helper function to format long_name: SAP Description + mgrp_code + mgrp_longname + attr_name: attr_value pairs
+def format_long_name(sap_name, mgrp_code, mgrp_long_name, attributes):
+    """Format long_name as 'SAP Description, mgrp_code, mgrp_longname, attr1: val1, attr2: val2'"""
+    parts = []
+    if sap_name:
+        parts.append(str(sap_name))
     if mgrp_code:
         parts.append(str(mgrp_code))
     if mgrp_long_name:
         parts.append(str(mgrp_long_name))
-    if short_name:
-        parts.append(str(short_name))
+    if attributes and isinstance(attributes, dict):
+        attr_pairs = [f"{k}: {v}" for k, v in attributes.items() if v]
+        parts.extend(attr_pairs)
     return ", ".join(parts)
 
 
@@ -49,8 +56,17 @@ def create_itemmaster(request):
     try:
         data = json.loads(request.body.decode("utf-8"))
 
-        sap_item_id = data.get("sap_item_id")
-        sap_name = data.get("sap_name", "")
+        raw_sap_id = data.get("sap_item_id")
+        if raw_sap_id not in (None, "", "null"):
+            raw_sap_str = str(raw_sap_id).strip()
+            if not raw_sap_str.isdigit():
+                return JsonResponse({"error": "SAP Material Number must be numeric (digits only)"}, status=400)
+            if len(raw_sap_str) > 10:
+                return JsonResponse({"error": "SAP Material Number must be at most 10 digits"}, status=400)
+            sap_item_id = int(raw_sap_str)
+        else:
+            sap_item_id = None
+        sap_name = data.get("sap_name", "") or data.get("sap_description", "")
         mat_type_code = data.get("mat_type_code")
         mgrp_code = data.get("mgrp_code")
 
@@ -58,7 +74,7 @@ def create_itemmaster(request):
         item_desc = data.get("item_desc") or data.get("short_name")
         notes = data.get("notes", "") or data.get("long_name", "")
         search_text = data.get("search_text", "")
-        uom = data.get("uom", "")
+        item_uom = data.get("uom", "")
         selected_attributes = data.get("attributes", {})
 
         # Required validation
@@ -106,16 +122,16 @@ def create_itemmaster(request):
             else:
                 # Extract base value (remove UOM if present)
                 base_value = value
-                uom = allowed_attrs[key].get("uom", "")
-                if uom and isinstance(value, str):
+                attr_uom = allowed_attrs[key].get("uom", "")
+                if attr_uom and isinstance(value, str):
                     # Check if value ends with UOM (handle both single and multiple UOMs)
                     uom_list = []
-                    if isinstance(uom, list):
-                        uom_list = uom
-                    elif isinstance(uom, str):
+                    if isinstance(attr_uom, list):
+                        uom_list = attr_uom
+                    elif isinstance(attr_uom, str):
                         # Handle comma-separated UOMs
-                        uom_list = [u.strip() for u in uom.split(",")] if "," in uom else [uom]
-                    
+                        uom_list = [u.strip() for u in attr_uom.split(",")] if "," in attr_uom else [attr_uom]
+
                     for u in uom_list:
                         if value.endswith(f" {u}"):
                             base_value = value.replace(f" {u}", "")
@@ -145,19 +161,19 @@ def create_itemmaster(request):
                     # Remove UOM if present
                     normalized_value = str(value).strip()
                     # Check if value ends with UOM
-                    uom = allowed_attrs.get(key, {}).get("uom", "")
-                    if uom:
+                    chk_uom = allowed_attrs.get(key, {}).get("uom", "")
+                    if chk_uom:
                         uom_list = []
-                        if isinstance(uom, list):
-                            uom_list = uom
-                        elif isinstance(uom, str):
-                            uom_list = [u.strip() for u in uom.split(",")] if "," in uom else [uom]
+                        if isinstance(chk_uom, list):
+                            uom_list = chk_uom
+                        elif isinstance(chk_uom, str):
+                            uom_list = [u.strip() for u in chk_uom.split(",")] if "," in chk_uom else [chk_uom]
                         for u in uom_list:
                             if normalized_value.endswith(f" {u}"):
                                 normalized_value = normalized_value.replace(f" {u}", "").strip()
                                 break
                     normalized_new_attrs[key] = normalized_value
-            
+
             # Find existing materials with same mgrp_code and matching attributes
             existing_items = ItemMaster.objects.filter(
                 mgrp_code=mat_group,
@@ -173,13 +189,13 @@ def create_itemmaster(request):
                         if value:
                             normalized_value = str(value).strip()
                             # Remove UOM if present
-                            uom = allowed_attrs.get(key, {}).get("uom", "")
-                            if uom:
+                            chk_uom2 = allowed_attrs.get(key, {}).get("uom", "")
+                            if chk_uom2:
                                 uom_list = []
-                                if isinstance(uom, list):
-                                    uom_list = uom
-                                elif isinstance(uom, str):
-                                    uom_list = [u.strip() for u in uom.split(",")] if "," in uom else [uom]
+                                if isinstance(chk_uom2, list):
+                                    uom_list = chk_uom2
+                                elif isinstance(chk_uom2, str):
+                                    uom_list = [u.strip() for u in chk_uom2.split(",")] if "," in chk_uom2 else [chk_uom2]
                                 for u in uom_list:
                                     if normalized_value.endswith(f" {u}"):
                                         normalized_value = normalized_value.replace(f" {u}", "").strip()
@@ -206,21 +222,18 @@ def create_itemmaster(request):
         
         # Get mgrp_long_name from MatGroup
         mgrp_long_name = mat_group.mgrp_longname if mat_group else None
-        
-        # Format short_name: if attributes are provided, use formatted attributes, otherwise use item_desc
-        if selected_attributes and any(selected_attributes.values()):
-            formatted_short_name = format_attributes_for_short_name(selected_attributes)
-            # If formatted attributes is empty or too short, fall back to item_desc
-            if not formatted_short_name or len(formatted_short_name) < 3:
-                formatted_short_name = item_desc
-        else:
-            formatted_short_name = item_desc
-        
-        # Format long_name with mgrp_code, mgrp_long_name, short_name
+
+        # Format short_name: SAP Description + attribute values
+        formatted_short_name = format_short_name(sap_name, selected_attributes if selected_attributes and any(selected_attributes.values()) else None)
+        if not formatted_short_name or len(formatted_short_name) < 3:
+            formatted_short_name = item_desc or sap_name or "Auto-generated"
+
+        # Format long_name: SAP Description + mgrp_code + mgrp_longname + attr_name: attr_value
         formatted_long_name = format_long_name(
+            sap_name,
             mat_group.mgrp_code if mat_group else None,
             mgrp_long_name,
-            formatted_short_name
+            selected_attributes if selected_attributes and any(selected_attributes.values()) else None
         )
 
         # Create ItemMaster
@@ -233,7 +246,7 @@ def create_itemmaster(request):
             long_name=formatted_long_name,
             mgrp_long_name=mgrp_long_name,  # Store mgrp_long_name separately
             search_text=search_text,
-            uom=uom,
+            uom=item_uom,
             attributes=selected_attributes,
             createdby=employee,
             updatedby=employee
@@ -243,12 +256,13 @@ def create_itemmaster(request):
             "local_item_id": item.local_item_id,
             "sap_item_id": item.sap_item_id,
             "sap_name": item.sap_name,
+            "sap_description": item.sap_name,
             "mat_type_code": item.mat_type_code.mat_type_code,
             "mgrp_code": item.mgrp_code.mgrp_code,
-            "item_desc": item.short_name,  # Map to old field name for frontend compatibility
+            "item_desc": item.short_name,
             "short_name": item.short_name,
             "attributes": item.attributes,
-            "notes": item.long_name,  # Map to old field name for frontend compatibility
+            "notes": item.long_name,
             "long_name": item.long_name,
             "search_text": item.search_text,
             "uom": item.uom,
@@ -263,6 +277,8 @@ def create_itemmaster(request):
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format"}, status=400)
+    except IntegrityError:
+        return JsonResponse({"error": "A material with this SAP Material Number already exists"}, status=400)
     except Exception as e:
         print("ERROR:", e)
         return JsonResponse({"error": str(e)}, status=500)
@@ -278,20 +294,23 @@ def list_itemmasters(request):
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
-    items = ItemMaster.objects.filter(is_deleted=False)
+    include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
+    items = ItemMaster.objects.filter(is_deleted=True) if include_deleted else ItemMaster.objects.filter(is_deleted=False)
     response_data = []
 
     for item in items:
         # Compute long_name on-the-fly if not stored
         long_name = item.long_name or format_long_name(
+            item.sap_name,
             item.mgrp_code.mgrp_code if item.mgrp_code else None,
             item.mgrp_long_name,
-            item.short_name
+            item.attributes
         )
         response_data.append({
             "local_item_id": item.local_item_id,
             "sap_item_id": item.sap_item_id,
             "sap_name": item.sap_name,
+            "sap_description": item.sap_name,
             "mat_type_code": item.mat_type_code.mat_type_code,
             "mgrp_code": item.mgrp_code.mgrp_code,
             "mgrp_long_name": item.mgrp_long_name,
@@ -303,6 +322,7 @@ def list_itemmasters(request):
             "search_text": item.search_text,
             "uom": item.uom,
             "is_final": item.is_final,
+            "is_deleted": item.is_deleted,
             "created": item.created.strftime("%Y-%m-%d %H:%M:%S"),
             "updated": item.updated.strftime("%Y-%m-%d %H:%M:%S"),
             "createdby": get_employee_name(item.createdby),
@@ -409,9 +429,9 @@ def update_itemmaster(request, local_item_id):
             # Save attributes
             item.attributes = selected_attributes
 
-            # Update short_name from attributes
+            # Update short_name from SAP description + attributes
             if selected_attributes and any(selected_attributes.values()):
-                formatted_short_name = format_attributes_for_short_name(selected_attributes)
+                formatted_short_name = format_short_name(item.sap_name, selected_attributes)
                 if formatted_short_name and len(formatted_short_name) >= 3:
                     item.short_name = formatted_short_name
 
@@ -419,8 +439,18 @@ def update_itemmaster(request, local_item_id):
         # Standard updates
         # =========================================================
 
-        item.sap_item_id = data.get("sap_item_id", item.sap_item_id)
-        item.sap_name = data.get("sap_name", item.sap_name)
+        if "sap_item_id" in data:
+            raw_sap_id = data.get("sap_item_id")
+            if raw_sap_id not in (None, "", "null"):
+                raw_sap_str = str(raw_sap_id).strip()
+                if not raw_sap_str.isdigit():
+                    return JsonResponse({"error": "SAP Material Number must be numeric (digits only)"}, status=400)
+                if len(raw_sap_str) > 10:
+                    return JsonResponse({"error": "SAP Material Number must be at most 10 digits"}, status=400)
+                item.sap_item_id = int(raw_sap_str)
+            else:
+                item.sap_item_id = None
+        item.sap_name = data.get("sap_description") or data.get("sap_name", item.sap_name)
 
         if "attributes" not in data and ("item_desc" in data or "short_name" in data):
             item.short_name = data.get("item_desc") or data.get("short_name") or item.short_name
@@ -433,9 +463,10 @@ def update_itemmaster(request, local_item_id):
 
         # Always rebuild long_name
         item.long_name = format_long_name(
+            item.sap_name,
             item.mgrp_code.mgrp_code if item.mgrp_code else None,
             item.mgrp_long_name,
-            item.short_name
+            item.attributes
         )
 
         # Audit
@@ -448,6 +479,7 @@ def update_itemmaster(request, local_item_id):
             "local_item_id": item.local_item_id,
             "sap_item_id": item.sap_item_id,
             "sap_name": item.sap_name,
+            "sap_description": item.sap_name,
             "mat_type_code": item.mat_type_code.mat_type_code,
             "mgrp_code": item.mgrp_code.mgrp_code,
             "item_desc": item.short_name,
@@ -466,7 +498,8 @@ def update_itemmaster(request, local_item_id):
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
-
+    except IntegrityError:
+        return JsonResponse({"error": "A material with this SAP Material Number already exists"}, status=400)
     except Exception as e:
         print("ERROR:", e)
         return JsonResponse({"error": str(e)}, status=500)

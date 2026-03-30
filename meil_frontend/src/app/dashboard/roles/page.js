@@ -32,6 +32,7 @@ import {
     removeRolePermission
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useSortableData } from "@/hooks/useSortableData";
 
 export default function RolesPage() {
     const { token, loading, role: currentUserRole, fetchPermissionsForRole, checkPermission } = useAuth();
@@ -152,6 +153,7 @@ export default function RolesPage() {
             (r.role_priority + "").toLowerCase().includes(q)
         );
     }, [roles, searchQuery]);
+    const { sortedData: sortedRoles, requestSort, getSortIcon } = useSortableData(filteredRoles);
 
     // ------- CRUD: Roles -------
     const openAddRole = () => {
@@ -436,14 +438,14 @@ export default function RolesPage() {
                         <thead>
                             <tr className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white uppercase tracking-wide">
                                 <th className="w-10 px-3 py-2 text-left text-xs font-semibold"></th>
-                                <th className="px-3 py-2 text-left text-xs font-semibold">Role Name</th>
-                                <th className="px-3 py-2 text-left text-xs font-semibold">Priority</th>
+                                <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('role_name')}>Role Name {getSortIcon('role_name')}</th>
+                                <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('role_priority')}>Priority {getSortIcon('role_priority')}</th>
                                 <th className="px-3 py-2 text-left text-xs font-semibold">Permissions</th>
                                 <th className="px-3 py-2 text-left text-xs font-semibold">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredRoles.map((role, index) => {
+                            {sortedRoles.map((role, index) => {
                                 const permCount = Object.keys(role.permissions || {}).length;
                                 return (
                                     <React.Fragment key={role.id}>
@@ -624,7 +626,7 @@ export default function RolesPage() {
                                 </React.Fragment>
                             );
                         })}
-                        {filteredRoles.length === 0 && (
+                        {sortedRoles.length === 0 && (
                             <tr>
                                 <td colSpan="5" className="px-3 py-6 text-center">
                                     <div className="flex flex-col items-center justify-center text-gray-400">

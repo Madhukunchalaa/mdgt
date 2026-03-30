@@ -10,9 +10,11 @@ import {
   deleteCompany 
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
+import { useSortableData } from "@/hooks/useSortableData";
 
 export default function CompaniesPage() {
   const [companies, setCompanies] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
@@ -31,6 +33,10 @@ export default function CompaniesPage() {
     loadCompanies();
   }, []);
 
+  useEffect(() => {
+    if (token) loadCompanies();
+  }, [showDeleted]);
+
   const loadCompanies = async () => {
     try {
       setLoading(true);
@@ -40,8 +46,8 @@ export default function CompaniesPage() {
         setError("No authentication token found");
         return;
       }
-      
-      const data = await fetchCompanies(token);
+
+      const data = await fetchCompanies(token, showDeleted);
       setCompanies(data || []);
     } catch (err) {
       setError("Failed to load companies: " + (err.response?.data?.message || err.message || "Unknown error"));
@@ -59,6 +65,7 @@ export default function CompaniesPage() {
 
     return matchesSearch;
   });
+  const { sortedData: sortedCompanies, requestSort, getSortIcon } = useSortableData(filteredCompanies);
 
   // const role = localStorage.getItem("role");
 
@@ -167,6 +174,13 @@ export default function CompaniesPage() {
                 className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               />
             </div>
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Trash2 size={14} className="mr-1.5" />
+              {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+            </button>
             {checkPermission("companies", "create") && (
   <button
     onClick={handleAddNew}
@@ -207,20 +221,20 @@ export default function CompaniesPage() {
               <table className="w-full border-separate border-spacing-0 shadow-lg rounded-lg overflow-hidden">
                 <thead>
                   <tr className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white uppercase tracking-wide">
-                    <th className="px-3 py-2 text-left text-xs font-semibold">Company Name</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold">Contact</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold">Created</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold">Updated</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('company_name')}>Company Name{getSortIcon('company_name')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('contact')}>Contact{getSortIcon('contact')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('created')}>Created{getSortIcon('created')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('updated')}>Updated{getSortIcon('updated')}</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCompanies.length > 0 ? (
-                    filteredCompanies.map((company, index) => (
+                  {sortedCompanies.length > 0 ? (
+                    sortedCompanies.map((company, index) => (
                       <tr
                         key={company.company_name}
-                        className={`transition-all duration-300 hover:bg-purple-50 ${
-                          index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
+                        className={`transition-all duration-300 ${
+                          company.is_deleted ? 'bg-red-50 opacity-75' : index % 2 === 0 ? "bg-gray-50 hover:bg-purple-50" : "bg-gray-100 hover:bg-purple-50"
                         }`}
                       >
                         <td className="px-3 py-2">
@@ -229,6 +243,7 @@ export default function CompaniesPage() {
                             <div className="text-xs font-medium text-gray-900 font-mono bg-purple-50 px-1.5 py-0.5 rounded-md inline-block shadow-sm">
                               {company.company_name}
                             </div>
+                            {company.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}
                           </div>
                         </td>
                         <td className="px-3 py-2">

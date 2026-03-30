@@ -2,11 +2,13 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils import timezone
+from django.db import IntegrityError
 import json
 
 from .models import MatgAttributeItem
 from matgroups.models import MatGroup
 from Employee.models import Employee
+from itemmaster.models import ItemMaster
 from Common.Middleware import authenticate, restrict
 
 
@@ -45,14 +47,33 @@ def create_matgattribute(request):
 
         # Loop and create/update each attribute row
         for attr in attributes:
-            attribute_name = attr.get("attribute_name")
+            attribute_name = attr.get("attribute_name", "").strip().upper()
             possible_values = attr.get("possible_values", [])
             uom = attr.get("uom")
-            print_priority = attr.get("print_priority", 0)
+            print_priority = attr.get("print_priority") or attr.get("sequence")
             validation = attr.get("validation")
 
             if not attribute_name or not isinstance(possible_values, list):
                 return JsonResponse({"error": "Invalid attribute structure"}, status=400)
+
+            # Auto-assign sequence if not provided: max existing + 10, starting at 10
+            if not print_priority:
+                max_seq = MatgAttributeItem.objects.filter(
+                    mgrp_code=matgroup, is_deleted=False
+                ).exclude(attribute_name=attribute_name).order_by("-print_priority").values_list("print_priority", flat=True).first()
+                print_priority = (max_seq or 0) + 10
+
+            # Check for duplicate sequence (non-zero)
+            if print_priority:
+                duplicate = MatgAttributeItem.objects.filter(
+                    mgrp_code=matgroup,
+                    print_priority=print_priority,
+                    is_deleted=False
+                ).exclude(attribute_name=attribute_name).first()
+                if duplicate:
+                    return JsonResponse({
+                        "error": f"Sequence {print_priority} is already assigned to attribute '{duplicate.attribute_name}' in this material group"
+                    }, status=400)
 
             item, created = MatgAttributeItem.objects.update_or_create(
                 mgrp_code=matgroup,
@@ -78,6 +99,8 @@ def create_matgattribute(request):
                 "attribute_name": item.attribute_name,
                 "possible_values": item.possible_values,
                 "uom": item.uom,
+                "sequence": item.print_priority,
+                "print_priority": item.print_priority,
             })
 
         return JsonResponse({
@@ -87,6 +110,8 @@ def create_matgattribute(request):
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except IntegrityError:
+        return JsonResponse({"error": "A duplicate attribute record already exists for this material group"}, status=400)
 
 
 
@@ -99,7 +124,8 @@ def list_matgattributes(request):
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
-    items = MatgAttributeItem.objects.filter(is_deleted=False)
+    include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
+    items = MatgAttributeItem.objects.filter(is_deleted=True) if include_deleted else MatgAttributeItem.objects.filter(is_deleted=False)
 
     data = []
     for item in items:
@@ -110,7 +136,9 @@ def list_matgattributes(request):
             "possible_values": item.possible_values,
             "uom": item.uom,
             "validation": item.validation,
+            "sequence": item.print_priority,
             "print_priority": item.print_priority,
+            "is_deleted": item.is_deleted,
             "created": item.created.strftime("%Y-%m-%d %H:%M:%S"),
             "updated": item.updated.strftime("%Y-%m-%d %H:%M:%S"),
             "createdby": get_employee_name(item.createdby),
@@ -142,7 +170,7 @@ def update_matgattribute(request, item_id):
 
         # Update fields
         if "attribute_name" in data:
-            item.attribute_name = data["attribute_name"]
+            item.attribute_name = data["attribute_name"].strip().upper()
 
         if "possible_values" in data:
             if not isinstance(data["possible_values"], list):
@@ -152,8 +180,19 @@ def update_matgattribute(request, item_id):
         if "uom" in data:
             item.uom = data["uom"]
 
-        if "print_priority" in data:
-            item.print_priority = data["print_priority"]
+        if "print_priority" in data or "sequence" in data:
+            new_priority = data.get("sequence") or data.get("print_priority")
+            if new_priority:
+                duplicate = MatgAttributeItem.objects.filter(
+                    mgrp_code=item.mgrp_code,
+                    print_priority=new_priority,
+                    is_deleted=False
+                ).exclude(id=item_id).first()
+                if duplicate:
+                    return JsonResponse({
+                        "error": f"Sequence {new_priority} is already assigned to attribute '{duplicate.attribute_name}' in this material group"
+                    }, status=400)
+            item.print_priority = new_priority
 
         if "validation" in data:
             item.validation = data["validation"] if data["validation"] else None
@@ -182,6 +221,18 @@ def delete_matgattribute(request, item_id):
     item = MatgAttributeItem.objects.filter(id=item_id).first()
     if not item:
         return JsonResponse({"error": "Attribute item not found"}, status=404)
+
+    # Block deletion if this attribute is used by any items
+    print(f"[DELETE CHECK] Checking attribute: '{item.attribute_name}', mgrp: {item.mgrp_code}")
+    used_count = ItemMaster.objects.filter(
+        is_deleted=False,
+        attributes__has_key=item.attribute_name
+    ).count()
+    print(f"[DELETE CHECK] Items using this attribute: {used_count}")
+    if used_count > 0:
+        return JsonResponse({
+            "error": f"Cannot delete '{item.attribute_name}'. It is assigned to {used_count} item(s). Remove it from all items before deleting."
+        }, status=400)
 
     item.is_deleted = True
     item.save()

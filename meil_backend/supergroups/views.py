@@ -4,6 +4,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.utils import timezone
 import json
+from django.db import IntegrityError
 from .models import SuperGroup
 from Employee.models import Employee
 from Common.Middleware import authenticate, restrict
@@ -23,12 +24,22 @@ def create_supergroup(request):
         try:
             data = json.loads(request.body.decode("utf-8"))
 
-            sgrp_code = data.get("sgrp_code")
+            sgrp_code = data.get("sgrp_code", "").strip().upper()
             sgrp_name = data.get("sgrp_name")
             dept_name = data.get("dept_name")
 
             if not sgrp_code or not sgrp_name or not dept_name:
                 return JsonResponse({"error": "All fields (sgrp_code, sgrp_name, dept_name) are required"}, status=400)
+
+            # Validate: sgrp_code must be exactly 5 alphabetic characters
+            if len(sgrp_code) != 5:
+                return JsonResponse({"error": "Super Group code must be exactly 5 characters"}, status=400)
+            if not sgrp_code.isalpha():
+                return JsonResponse({"error": "Super Group code must contain only alphabetic characters (no numbers or special characters)"}, status=400)
+
+            # Check for duplicate
+            if SuperGroup.objects.filter(sgrp_code=sgrp_code).exists():
+                return JsonResponse({"error": f"Super Group with code '{sgrp_code}' already exists"}, status=400)
 
             # ✅ Get Employee for createdby
             emp_id = request.user.get("emp_id")
@@ -55,6 +66,8 @@ def create_supergroup(request):
 
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except IntegrityError:
+            return JsonResponse({"error": "A Super Group with this code already exists"}, status=400)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
@@ -64,7 +77,8 @@ def create_supergroup(request):
 # @restrict(roles=["Admin", "SuperAdmin", "User","MDGT"])
 def list_supergroups(request):
     if request.method == "GET":
-        supergroups = SuperGroup.objects.filter(is_deleted=False)
+        include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
+        supergroups = SuperGroup.objects.filter(is_deleted=True) if include_deleted else SuperGroup.objects.filter(is_deleted=False)
         response_data = []
         for sg in supergroups:
             response_data.append({
@@ -74,7 +88,8 @@ def list_supergroups(request):
                 "created": sg.created.strftime("%Y-%m-%d %H:%M:%S"),
                 "updated": sg.updated.strftime("%Y-%m-%d %H:%M:%S"),
                 "createdby": get_employee_name(sg.createdby),
-                "updatedby": get_employee_name(sg.updatedby)
+                "updatedby": get_employee_name(sg.updatedby),
+                "is_deleted": sg.is_deleted,
             })
         return JsonResponse(response_data, safe=False)
 

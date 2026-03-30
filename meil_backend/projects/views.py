@@ -39,7 +39,8 @@ def is_admin_or_superadmin(user_payload):
 # @restrict(roles=["Admin", "SuperAdmin","MDGT"])
 def list_projects(request):
     if request.method == "GET":
-        projects = Project.objects.all()
+        include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
+        projects = Project.objects.filter(is_deleted=True) if include_deleted else Project.objects.filter(is_deleted=False)
         data = [
             {
                 "project_code": p.project_code,
@@ -48,6 +49,7 @@ def list_projects(request):
                 "createdby": p.createdby.emp_name if p.createdby else None,
                 "updated": p.updated,
                 "updatedby": p.updatedby.emp_name if p.updatedby else None,
+                "is_deleted": p.is_deleted,
             }
             for p in projects
         ]
@@ -82,6 +84,15 @@ def create_project(request):
         if not project_code or not project_name:
             return JsonResponse({"error": "Missing required fields"}, status=400)
 
+        if not project_code.isdigit():
+            return JsonResponse({"error": "Project code must contain numbers only"}, status=400)
+
+        if len(project_code) < 3:
+            return JsonResponse({"error": "Project code must be at least 3 digits"}, status=400)
+
+        if project_code.startswith("0"):
+            return JsonResponse({"error": "Project code cannot start with 0"}, status=400)
+
         # Create project
         project = Project.objects.create(
             project_code=project_code,
@@ -92,6 +103,8 @@ def create_project(request):
             updatedby=employee,
             is_deleted=False
         )
+
+
 
         return JsonResponse({
             "message": "Project created successfully",

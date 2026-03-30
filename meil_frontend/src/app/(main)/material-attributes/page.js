@@ -7,9 +7,11 @@ import { fetchMaterialAttributes, createMaterialAttribute, updateMaterialAttribu
 import {useAuth} from "@/context/AuthContext";
 import SearchableDropdown from "@/components/SearchableDropdown";
 import ViewModal from "@/components/ViewModal";
+import { useSortableData } from "@/hooks/useSortableData";
 
 export default function MaterialAttributesPage() {
   const [attributes, setAttributes] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [materialGroups, setMaterialGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,12 +67,15 @@ export default function MaterialAttributesPage() {
     }
   }, [token]);
 
+  useEffect(() => {
+    if (token) loadAttributes();
+  }, [showDeleted]);
 
   const loadAttributes = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchMaterialAttributes(token);
+      const data = await fetchMaterialAttributes(token, showDeleted);
       setAttributes(data || []);
     } catch (err) {
       setError("Failed to load material attributes: " + (err.response?.data?.error || err.message));
@@ -103,14 +108,27 @@ export default function MaterialAttributesPage() {
     return matchesSearch;
   });
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredAttributes.length / itemsPerPage);
+  // Sort then paginate
+  const { sortedData: sortedAttributes, requestSort, getSortIcon } = useSortableData(filteredAttributes, 'print_priority');
+  const totalPages = Math.ceil(sortedAttributes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentAttributes = filteredAttributes.slice(startIndex, endIndex);
+  const currentAttributes = sortedAttributes.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
+  };
+
+  // Compute the next available print priority for a given matgroup
+  const getNextPriority = (mgrpCode, formAttrs = []) => {
+    const existingPriorities = attributes
+      .filter(a => a.mgrp_code === mgrpCode && (a.print_priority || 0) > 0)
+      .map(a => a.print_priority || 0);
+    const formPriorities = formAttrs
+      .filter(a => (a.print_priority || 0) > 0)
+      .map(a => a.print_priority || 0);
+    const allPriorities = [...existingPriorities, ...formPriorities];
+    return allPriorities.length > 0 ? Math.max(...allPriorities) + 1 : 1;
   };
 
   // Modal handlers
@@ -342,6 +360,20 @@ export default function MaterialAttributesPage() {
       return;
     }
 
+    // Check for duplicate print_priority (non-zero)
+    const priorityToCheck = parseInt(newAttrPrintPriority) || 0;
+    if (priorityToCheck !== 0) {
+      if (formData.attributes.some(attr => (attr.print_priority || 0) === priorityToCheck)) {
+        setError(`Priority ${priorityToCheck} is already used by another attribute you added`);
+        return;
+      }
+      const existingForGroup = attributes.filter(a => a.mgrp_code === formData.mgrp_code);
+      if (existingForGroup.some(attr => (attr.print_priority || 0) === priorityToCheck)) {
+        setError(`Priority ${priorityToCheck} is already assigned to an existing attribute for this material group`);
+        return;
+      }
+    }
+
     const newAttr = {
       attribute_name: newAttrName.trim(),
       possible_values: newAttrValues,
@@ -357,16 +389,17 @@ export default function MaterialAttributesPage() {
       newAttr.uom = newAttrUnits.length === 1 ? newAttrUnits[0] : newAttrUnits;
     }
 
+    const updatedAttrs = [...formData.attributes, newAttr];
     setFormData(prev => ({
       ...prev,
-      attributes: [...prev.attributes, newAttr]
+      attributes: updatedAttrs
     }));
 
-    // Reset form
+    // Reset form - auto-set next available priority
     setNewAttrName("");
     setNewAttrValues([]);
     setNewAttrValueInput("");
-    setNewAttrPrintPriority(0);
+    setNewAttrPrintPriority(getNextPriority(formData.mgrp_code, updatedAttrs));
     setNewAttrValidation("");
     setNewAttrHasUOM(false);
     setNewAttrUnits([]);
@@ -480,13 +513,13 @@ export default function MaterialAttributesPage() {
         setError("You don't have permission to delete material attributes");
         return;
       }
-      
+
       try {
         setError(null);
         await deleteMaterialAttribute(token, id);
         await loadAttributes();
       } catch (err) {
-        setError("Failed to delete material attribute: " + (err.response?.data?.error || err.message));
+        setError(err.response?.data?.error || "Failed to delete material attribute: " + err.message);
         console.error("Error deleting material attribute:", err);
       }
     }
@@ -521,6 +554,13 @@ export default function MaterialAttributesPage() {
                 className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Trash2 size={14} className="mr-1.5" />
+              {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+            </button>
             {checkPermission("attribute", "create") && (
               <button
                 type="button"
@@ -548,13 +588,13 @@ export default function MaterialAttributesPage() {
                 {/* Table Header */}
                 <thead>
                   <tr className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white uppercase tracking-wide">
-                    <th className="px-3 py-2 text-left text-xs font-semibold">Material Group</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold">Attribute Name</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('mgrp_code')}>Material Group {getSortIcon('mgrp_code')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('attribute_name')}>Attribute Name {getSortIcon('attribute_name')}</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold">Possible Values</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold">UOM</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold">Priority</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold">Created</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold">Updated</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('uom')}>UOM {getSortIcon('uom')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('print_priority')}>Priority {getSortIcon('print_priority')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('created')}>Created {getSortIcon('created')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('updated')}>Updated {getSortIcon('updated')}</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -565,13 +605,14 @@ export default function MaterialAttributesPage() {
                     currentAttributes.map((attribute, index) => (
                       <tr
                         key={attribute.id}
-                        className={`transition-all duration-300 hover:bg-purple-50 ${
-                          index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
-                        }`}
+                        className={`transition-all duration-300 ${attribute.is_deleted ? 'bg-red-50 opacity-75' : index % 2 === 0 ? "bg-gray-50 hover:bg-purple-50" : "bg-gray-100 hover:bg-purple-50"}`}
                       >
                         <td className="px-3 py-2">
-                          <div className="text-xs font-medium text-gray-900 font-mono bg-purple-50 px-1.5 py-0.5 rounded-md inline-block shadow-sm">
-                            {attribute.mgrp_code}
+                          <div className="flex items-center gap-1.5">
+                            <div className="text-xs font-medium text-gray-900 font-mono bg-purple-50 px-1.5 py-0.5 rounded-md inline-block shadow-sm">
+                              {attribute.mgrp_code}
+                            </div>
+                            {attribute.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}
                           </div>
                         </td>
                         <td className="px-3 py-2">
@@ -1087,7 +1128,10 @@ export default function MaterialAttributesPage() {
                       label="Material Group Code *"
                       options={materialGroups}
                       value={formData.mgrp_code}
-                      onChange={(value) => setFormData(prev => ({ ...prev, mgrp_code: value || "" }))}
+                      onChange={(value) => {
+                        setFormData(prev => ({ ...prev, mgrp_code: value || "" }));
+                        setNewAttrPrintPriority(getNextPriority(value || "", []));
+                      }}
                       placeholder={materialGroups.length === 0 ? "Loading material groups..." : "Select material group..."}
                       searchPlaceholder="Search material groups..."
                       required
@@ -1104,7 +1148,46 @@ export default function MaterialAttributesPage() {
                       <p className="mt-1 text-xs text-gray-500">No material groups available. Please ensure material groups are created first.</p>
                     )}
                   </div>
-                  
+
+                  {/* Existing attributes for selected matgroup */}
+                  {formData.mgrp_code && (() => {
+                    const existingForGroup = attributes
+                      .filter(a => a.mgrp_code === formData.mgrp_code)
+                      .sort((a, b) => (a.print_priority || 0) - (b.print_priority || 0));
+                    if (existingForGroup.length === 0) return null;
+                    return (
+                      <div className="border rounded-lg p-3 bg-blue-50 border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-800 mb-2">
+                          Existing Attributes for {formData.mgrp_code} ({existingForGroup.length})
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-left text-gray-600 border-b border-blue-200">
+                                <th className="pb-1 pr-3">Name</th>
+                                <th className="pb-1 pr-3">Priority</th>
+                                <th className="pb-1 pr-3">Values</th>
+                                <th className="pb-1">Validation</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {existingForGroup.map(attr => (
+                                <tr key={attr.id} className="border-b border-blue-100 last:border-0">
+                                  <td className="py-1 pr-3 font-medium text-gray-800">{attr.attribute_name}</td>
+                                  <td className="py-1 pr-3 text-gray-600">{attr.print_priority || 0}</td>
+                                  <td className="py-1 pr-3 text-gray-600">
+                                    {(attr.possible_values || []).slice(0, 3).join(', ')}
+                                    {(attr.possible_values?.length || 0) > 3 ? '...' : ''}
+                                  </td>
+                                  <td className="py-1 text-gray-600">{attr.validation || '-'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Add New Attribute Form */}
                   <div className="border rounded-lg p-3 bg-gray-50">

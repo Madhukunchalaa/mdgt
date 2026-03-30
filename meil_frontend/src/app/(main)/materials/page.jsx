@@ -8,9 +8,11 @@ import { fetchItemMasters, createItemMaster, updateItemMaster, deleteItemMaster,
 import {useAuth} from "@/context/AuthContext";
 import BackButton from "@/components/BackButton";
 import SearchableDropdown from "@/components/SearchableDropdown";
+import { useSortableData } from "@/hooks/useSortableData";
 
 export default function MaterialsPage() {
   const [materials, setMaterials] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [materialGroups, setMaterialGroups] = useState([]);
   const [materialTypes, setMaterialTypes] = useState([]);
   const [materialAttributes, setMaterialAttributes] = useState({});
@@ -56,6 +58,10 @@ export default function MaterialsPage() {
     }
   }, [token]);
 
+  useEffect(() => {
+    if (token) loadMaterials();
+  }, [showDeleted]);
+
   // Load attributes when switching to attributes tab if material group is selected
   useEffect(() => {
     if (activeTab === "attributes" && formData.mgrp_code && Object.keys(materialAttributes).length === 0) {
@@ -68,7 +74,7 @@ export default function MaterialsPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchItemMasters(token);
+      const data = await fetchItemMasters(token, showDeleted);
       setMaterials(data);
     } catch (err) {
       setError("Failed to load materials: " + (err.response?.data?.error || err.message));
@@ -172,7 +178,12 @@ export default function MaterialsPage() {
   
     const matchesSearch =
       safe(material.item_desc).includes(search) ||
+      safe(material.short_name).includes(search) ||
       safe(material.sap_item_id).includes(search) ||
+      safe(material.sap_name).includes(search) ||
+      safe(material.sap_description).includes(search) ||
+      safe(material.long_name).includes(search) ||
+      safe(material.mgrp_code).includes(search) ||
       safe(material.search_text).includes(search);
   
     const matchesGroup =
@@ -182,12 +193,14 @@ export default function MaterialsPage() {
       filterType === "all" || material.mat_type_code === filterType;
   
     // Filter by is_final based on active tab
-    const matchesFinalStatus = 
-      tableTab === "raw" ? (material.is_final === false) : (material.is_final === true);
+    const matchesFinalStatus =
+      tableTab === "raw" ? !material.is_final : !!material.is_final;
   
     return matchesSearch && matchesGroup && matchesType && matchesFinalStatus;
   });
-  
+
+  const { sortedData: sortedMaterials, requestSort, getSortIcon } = useSortableData(filteredMaterials);
+
   // const role = localStorage.getItem("role");
 
   // Modal handlers
@@ -678,13 +691,20 @@ export default function MaterialsPage() {
                 ))}
               </select>
             </div>
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Trash2 size={14} className="mr-1.5" />
+              {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+            </button>
             {checkPermission("item", "create") && (
               <button
                 onClick={handleAddNew}
                 className="flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Plus size={16} className="mr-1.5" />
-                Add Material
+                Add Material Master
               </button>
             )}
           </div>
@@ -703,7 +723,7 @@ export default function MaterialsPage() {
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Raw Data
+                Draft
               </button>
               <button
                 onClick={() => setTableTab("cleaned")}
@@ -713,7 +733,7 @@ export default function MaterialsPage() {
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Cleaned Data
+                Final
               </button>
             </div>
           </div>
@@ -725,33 +745,38 @@ export default function MaterialsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              {/* Raw Data Table */}
+              {/* Draft Table */}
               {tableTab === "raw" && (
                 <table className="w-full border-collapse">
                   <thead className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">SAP Item ID</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">SAP Name</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Material Group Long Name</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Material Group Code</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('sap_item_id')}>SAP Material Number {getSortIcon('sap_item_id')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('sap_name')}>SAP Description {getSortIcon('sap_name')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('item_long_name')}>Long Name {getSortIcon('item_long_name')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('mgrp_longname')}>Material Group Long Name {getSortIcon('mgrp_longname')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('mgrp_code')}>Material Group Code {getSortIcon('mgrp_code')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredMaterials.length > 0 ? (
-                      filteredMaterials.map((material, index) => (
+                    {sortedMaterials.length > 0 ? (
+                      sortedMaterials.map((material, index) => (
                         <tr
                           key={material.local_item_id}
                           className={`transition-all duration-200 ${
-                            index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
-                          } hover:bg-purple-50`}
+                            material.is_deleted ? 'bg-red-50 opacity-75' : index % 2 === 0 ? "bg-gray-50 hover:bg-purple-50" : "bg-gray-100 hover:bg-purple-50"
+                          }`}
                         >
                           <td className="px-3 py-2">
-                            <div className="inline-block px-1.5 py-0.5 bg-purple-100 text-purple-800 font-mono rounded-md text-xs shadow-sm">
-                              {material.sap_item_id || "-"}
+                            <div className="flex items-center gap-1.5">
+                              <div className="inline-block px-1.5 py-0.5 bg-purple-100 text-purple-800 font-mono rounded-md text-xs shadow-sm">
+                                {material.sap_item_id || "-"}
+                              </div>
+                              {material.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}
                             </div>
                           </td>
                           <td className="px-3 py-2 text-xs text-gray-900">{material.sap_name || "-"}</td>
+                          <td className="px-3 py-2 text-xs text-gray-900 max-w-xs break-words whitespace-normal" title={material.long_name || material.notes || ""}>{material.long_name || material.notes || "-"}</td>
                           <td className="px-3 py-2 text-xs text-gray-900">
                             {(() => {
                               const matchedGroup = materialGroups.find(g => g.mgrp_code === material.mgrp_code);
@@ -792,7 +817,7 @@ export default function MaterialsPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="5" className="px-3 py-4 text-center text-xs text-gray-500">
+                        <td colSpan="6" className="px-3 py-4 text-center text-xs text-gray-500">
                           No materials found matching your criteria.
                         </td>
                       </tr>
@@ -801,24 +826,24 @@ export default function MaterialsPage() {
                 </table>
               )}
 
-              {/* Cleaned Data Table */}
+              {/* Final Table */}
               {tableTab === "cleaned" && (
                 <table className="w-full border-collapse">
                   <thead className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">SAP Item ID</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Material Type</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Short Name</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Long Name</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Search Text</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Created</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Updated</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('sap_item_id')}>SAP Material Number {getSortIcon('sap_item_id')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('mat_type_desc')}>Material Type {getSortIcon('mat_type_desc')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('item_desc')}>Short Name {getSortIcon('item_desc')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('item_long_name')}>Long Name {getSortIcon('item_long_name')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('search_text')}>Search Text {getSortIcon('search_text')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('created')}>Created {getSortIcon('created')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('updated')}>Updated {getSortIcon('updated')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredMaterials.length > 0 ? (
-                      filteredMaterials.map((material, index) => (
+                    {sortedMaterials.length > 0 ? (
+                      sortedMaterials.map((material, index) => (
                         <tr
                           key={material.local_item_id}
                           className={`transition-all duration-200 ${
@@ -908,7 +933,7 @@ export default function MaterialsPage() {
           <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-3 border-b">
               <h2 className="text-lg font-semibold text-gray-800">
-                {editingMaterial ? "Edit Material" : "Add New Material"}
+                {editingMaterial ? "Edit Material Master" : "Add New Material Master"}
               </h2>
               <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
                 ✕
@@ -956,26 +981,26 @@ export default function MaterialsPage() {
               {activeTab === "general" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">SAP Item ID</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">SAP Material Number</label>
                     <input
                       type="text"
                       name="sap_item_id"
                       value={formData.sap_item_id}
                       onChange={handleInputChange}
                       className="w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="SAP Item ID"
+                      placeholder="Numeric, max 10 digits"
                     />
                   </div>
-                  
+
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">SAP Name</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">SAP Description</label>
                     <input
                       type="text"
                       name="sap_name"
                       value={formData.sap_name || ""}
                       onChange={handleInputChange}
                       className="w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="SAP Name"
+                      placeholder="SAP Description"
                     />
                   </div>
                   
@@ -1110,7 +1135,7 @@ export default function MaterialsPage() {
                           Mark as Final
                         </label>
                         <p className="text-xs text-gray-500">
-                          Toggle this to move the material to Cleaned Data tab
+                          Toggle this to move the material to Final tab
                         </p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -1152,7 +1177,7 @@ export default function MaterialsPage() {
                         
                         {/* Compact Table Body */}
                         <div className="divide-y divide-gray-200">
-                          {Object.entries(materialAttributes).map(([attrName, attrConfig]) => {
+                          {Object.entries(materialAttributes).sort(([, a], [, b]) => (a.print_priority || 0) - (b.print_priority || 0)).map(([attrName, attrConfig]) => {
                             const values = attrConfig.values || [];
                             // Extract and clean UOMs - flatten arrays and filter empty values
                             let uoms = [];
@@ -1410,23 +1435,16 @@ export default function MaterialsPage() {
               {viewActiveTab === "general" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Local Item ID</label>
-                    <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900">
-                      {viewingMaterial.local_item_id || "N/A"}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">SAP Item ID</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">SAP Material Number</label>
                     <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900">
                       {viewingMaterial.sap_item_id || "N/A"}
                     </div>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">SAP Item Name</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">SAP Description</label>
                     <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900">
-                      {viewingMaterial.sap_name || "N/A"}
+                      {viewingMaterial.sap_name || viewingMaterial.sap_description || "N/A"}
                     </div>
                   </div>
                   
@@ -1477,7 +1495,7 @@ export default function MaterialsPage() {
                   
                   <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Long Name</label>
-                    <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900 min-h-[50px]">
+                    <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900 min-h-[50px] break-words whitespace-normal">
                       {viewingMaterial.long_name || viewingMaterial.notes || "N/A"}
                     </div>
                   </div>

@@ -10,8 +10,10 @@ import {
   deleteEmailDomain 
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
+import { useSortableData } from "@/hooks/useSortableData";
 export default function EmailDomainsPage() {
   const [domains, setDomains] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDomain, setEditingDomain] = useState(null);
@@ -27,16 +29,19 @@ export default function EmailDomainsPage() {
     loadEmailDomains();
   }, []);
 
+  useEffect(() => {
+    if (token) loadEmailDomains();
+  }, [showDeleted]);
+
   const loadEmailDomains = async () => {
     try {
       setLoading(true);
-      // const token = localStorage.getItem("token");
       if (!token) {
         setError("No authentication token found");
         return;
       }
-      
-      const data = await fetchEmailDomains(token);
+
+      const data = await fetchEmailDomains(token, showDeleted);
       setDomains(data || []);
     } catch (err) {
       setError("Failed to load email domains: " + (err.message || "Unknown error"));
@@ -53,6 +58,7 @@ export default function EmailDomainsPage() {
 
     return matchesSearch;
   });
+  const { sortedData: sortedDomains, requestSort, getSortIcon } = useSortableData(filteredDomains);
 
   // const role = localStorage.getItem("role");
 
@@ -156,6 +162,13 @@ export default function EmailDomainsPage() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Trash2 size={14} className="mr-1.5" />
+              {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+            </button>
             {
               checkPermission("email","create") &&(
                 <button
@@ -199,21 +212,21 @@ export default function EmailDomainsPage() {
               <table className="w-full border-separate border-spacing-0 shadow-lg rounded-lg overflow-hidden">
                 <thead>
                   <tr className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white uppercase tracking-wide">
-                    <th className="px-6 py-4 text-left text-sm font-semibold">Domain Name</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold">Created</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold">Created By</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold">Updated</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold">Updated By</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('domain_name')}>Domain Name{getSortIcon('domain_name')}</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('created')}>Created{getSortIcon('created')}</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('createdby')}>Created By{getSortIcon('createdby')}</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('updated')}>Updated{getSortIcon('updated')}</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('updatedby')}>Updated By{getSortIcon('updatedby')}</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDomains.length > 0 ? (
-                    filteredDomains.map((domain, index) => (
+                  {sortedDomains.length > 0 ? (
+                    sortedDomains.map((domain, index) => (
                       <tr
                         key={domain.emaildomain_id}
-                        className={`transition-all duration-300 hover:bg-purple-50 ${
-                          index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
+                        className={`transition-all duration-300 ${
+                          domain.is_deleted ? 'bg-red-50 opacity-75' : index % 2 === 0 ? "bg-gray-50 hover:bg-purple-50" : "bg-gray-100 hover:bg-purple-50"
                         }`}
                       >
                         <td className="px-6 py-4">
@@ -222,6 +235,7 @@ export default function EmailDomainsPage() {
                             <div className="text-sm font-medium text-gray-900 font-mono bg-purple-50 px-2 py-1 rounded-md inline-block shadow-sm">
                               {domain.domain_name}
                             </div>
+                            {domain.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}
                           </div>
                         </td>
                         <td className="px-6 py-4">

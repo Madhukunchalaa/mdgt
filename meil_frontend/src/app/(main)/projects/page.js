@@ -8,10 +8,12 @@ import {
   deleteProject 
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
-import ViewModal from "@/components/ViewModal";  
+import ViewModal from "@/components/ViewModal";
+import { useSortableData } from "@/hooks/useSortableData";  
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState([]);
+    const [showDeleted, setShowDeleted] = useState(false);
     const [newProject, setNewProject] = useState({
         project_code: "",
         project_name: "",
@@ -33,6 +35,10 @@ export default function ProjectsPage() {
         }
     }, [token]);
 
+    useEffect(() => {
+        if (token) loadProjects();
+    }, [showDeleted]);
+
     const loadProjects = async () => {
         if (!token) return; // don't try if no token yet
         try {
@@ -42,8 +48,8 @@ export default function ProjectsPage() {
             //     setError("No authentication token found");
             //     return;
             // }
-            
-            const data = await fetchProjects(token);
+
+            const data = await fetchProjects(token, showDeleted);
             setProjects(data || []);
         } catch (err) {
             setError("Failed to load projects: " + (err.message || "Unknown error"));
@@ -57,6 +63,14 @@ export default function ProjectsPage() {
     const handleAdd = async () => {
         if (!newProject.project_code || !newProject.project_name) {
             setError("Please fill in required fields: Project Code and Project Name");
+            return;
+        }
+        if (!/^\d+$/.test(newProject.project_code)) {
+            setError("Project Code must contain numbers only");
+            return;
+        }
+        if (newProject.project_code.length < 3 || newProject.project_code.startsWith("0")) {
+            setError("Project Code must be at least 4 digits and must not start with 0");
             return;
         }
 
@@ -79,7 +93,8 @@ export default function ProjectsPage() {
             setNewProject({ project_code: "", project_name: "" });
             setIsModalOpen(false);
         } catch (err) {
-            setError("Failed to create project: " + (err.message || "Unknown error"));
+            const msg = err.response?.data?.error || err.message || "Unknown error";
+            setError(msg);
             console.error("Error creating project:", err);
         } finally {
             setSaving(false);
@@ -170,10 +185,11 @@ export default function ProjectsPage() {
     };
 
     // Filter projects based on search term
-    const filteredProjects = projects.filter(project => 
+    const filteredProjects = projects.filter(project =>
         project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         project.project_code.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    const { sortedData: sortedProjects, requestSort, getSortIcon } = useSortableData(filteredProjects);
 
     return (
         <div className="min-h-screen bg-gray-50 p-4">
@@ -193,6 +209,13 @@ export default function ProjectsPage() {
                             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
+                    <button
+                        onClick={() => setShowDeleted(v => !v)}
+                        className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                    >
+                        <Trash2 size={14} className="mr-1.5" />
+                        {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+                    </button>
                     {checkPermission("project", "create") && (
                         <button
                             onClick={openAddModal}
@@ -232,29 +255,30 @@ export default function ProjectsPage() {
       {/* Table Header */}
       <thead className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white shadow-md">
         <tr>
-          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider">Code</th>
-          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider">Name</th>
-          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider">Created</th>
-          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider">Created By</th>
-          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider">Last Updated</th>
-          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider">Updated By</th>
+          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('project_code')}>Code{getSortIcon('project_code')}</th>
+          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('project_name')}>Name{getSortIcon('project_name')}</th>
+          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('created')}>Created{getSortIcon('created')}</th>
+          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('createdby')}>Created By{getSortIcon('createdby')}</th>
+          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('updated')}>Last Updated{getSortIcon('updated')}</th>
+          <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('updatedby')}>Updated By{getSortIcon('updatedby')}</th>
           <th className="px-6 py-3 text-left text-sm font-semibold uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
 
       {/* Table Body */}
       <tbody>
-        {filteredProjects.length > 0 ? (
-          filteredProjects.map((proj, index) => (
+        {sortedProjects.length > 0 ? (
+          sortedProjects.map((proj, index) => (
             <tr
               key={proj.id || proj.project_code}
-              className={`transition-all duration-200 ${
-                index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
-              } hover:bg-purple-50`}
+              className={`transition-all duration-200 ${proj.is_deleted ? 'bg-red-50 opacity-75' : index % 2 === 0 ? "bg-gray-50 hover:bg-purple-50" : "bg-gray-100 hover:bg-purple-50"}`}
             >
               <td className="px-6 py-4">
-                <div className="inline-block px-2 py-1 bg-purple-100 text-purple-800 font-mono rounded-lg shadow-sm text-sm">
-                  {proj.project_code}
+                <div className="flex items-center gap-2">
+                  <div className="inline-block px-2 py-1 bg-purple-100 text-purple-800 font-mono rounded-lg shadow-sm text-sm">
+                    {proj.project_code}
+                  </div>
+                  {proj.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}
                 </div>
               </td>
               <td className="px-6 py-4 text-sm text-gray-900">{proj.project_name}</td>
@@ -362,13 +386,15 @@ export default function ProjectsPage() {
                                     </label>
                                     <input
                                         type="text"
-                                        placeholder="Enter unique project code"
+                                        inputMode="numeric"
+                                        placeholder="Enter unique project code (numbers only)"
                                         value={isEditing ? editProject.project_code : newProject.project_code}
-                                        onChange={(e) =>
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '');
                                             isEditing
-                                                ? setEditProject({ ...editProject, project_code: e.target.value })
-                                                : setNewProject({ ...newProject, project_code: e.target.value })
-                                        }
+                                                ? setEditProject({ ...editProject, project_code: val })
+                                                : setNewProject({ ...newProject, project_code: val });
+                                        }}
                                         disabled={isEditing}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />

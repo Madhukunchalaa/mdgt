@@ -11,8 +11,9 @@ User = get_user_model()
 
 # List all
 def validation_list_all(request):
-    lists = ValidationLists.objects.filter(is_deleted=False).values()
-    return JsonResponse(list(lists), safe=False)
+    include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
+    qs = ValidationLists.objects.filter(is_deleted=True) if include_deleted else ValidationLists.objects.filter(is_deleted=False)
+    return JsonResponse(list(qs.values()), safe=False)
 
 
 # Create

@@ -73,9 +73,10 @@ export const removeRolePermission = (token, role_name, permission_id) => {
 };
 
 // Material Groups API
-export const fetchMaterialGroups = (token) => {
+export const fetchMaterialGroups = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("matgroups/list/").then(res => res.data);
+    const url = includeDeleted ? "matgroups/list/?include_deleted=true" : "matgroups/list/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createMaterialGroup = (token, data) => {
@@ -94,9 +95,10 @@ export const deleteMaterialGroup = (token, mgrp_code) => {
 };
 
 // Material Types API
-export const fetchMaterialTypes = (token) => {
+export const fetchMaterialTypes = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("materialtype/materialtypes/").then(res => res.data);
+    const url = includeDeleted ? "materialtype/materialtypes/?include_deleted=true" : "materialtype/materialtypes/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createMaterialType = (token, data) => {
@@ -115,9 +117,10 @@ export const deleteMaterialType = (token, mat_type_code) => {
 };
 
 // Projects API
-export const fetchProjects = (token) => {
+export const fetchProjects = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("projects/list/").then(res => res.data);
+    const url = includeDeleted ? "projects/list/?include_deleted=true" : "projects/list/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createProject = (token, data) => {
@@ -136,9 +139,10 @@ export const deleteProject = (token, project_code) => {
 };
 
 // Email Domains API
-export const fetchEmailDomains = (token) => {
+export const fetchEmailDomains = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("emaildomains/list/").then(res => res.data);
+    const url = includeDeleted ? "emaildomains/list/?include_deleted=true" : "emaildomains/list/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createEmailDomain = (token, data) => {
@@ -157,9 +161,10 @@ export const deleteEmailDomain = (token, pk) => {
 };
 
 // Companies API
-export const fetchCompanies = (token) => {
+export const fetchCompanies = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("company/companies/").then(res => res.data);
+    const url = includeDeleted ? "company/companies/?include_deleted=true" : "company/companies/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createCompany = (token, data) => {
@@ -211,9 +216,10 @@ export const assignMaterialGroup = (token, request_id, material_group) => {
 };
 
 // Item Master API
-export const fetchItemMasters = (token) => {
+export const fetchItemMasters = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("itemmaster/list/").then(res => res.data);
+    const url = includeDeleted ? "itemmaster/list/?include_deleted=true" : "itemmaster/list/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createItemMaster = async (token, data) => {
@@ -246,9 +252,10 @@ export const deleteItemMaster = (token, local_item_id) => {
 };
 
 // Super Groups API
-export const fetchSuperGroups = (token) => {
+export const fetchSuperGroups = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("supergroup/supergroups/list/").then(res => res.data);
+    const url = includeDeleted ? "supergroup/supergroups/list/?include_deleted=true" : "supergroup/supergroups/list/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createSuperGroup = (token, data) => {
@@ -267,9 +274,10 @@ export const deleteSuperGroup = (token, sgrp_code) => {
 };
 
 // Validation Lists API
-export const fetchValidationLists = (token) => {
+export const fetchValidationLists = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("validationlists/validation-lists/").then(res => res.data);
+    const url = includeDeleted ? "validationlists/validation-lists/?include_deleted=true" : "validationlists/validation-lists/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createValidationList = (token, data) => {
@@ -288,9 +296,10 @@ export const deleteValidationList = (token, list_id) => {
 };
 
 // Material Attributes API
-export const fetchMaterialAttributes = (token) => {
+export const fetchMaterialAttributes = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("matgattribute/list/").then(res => res.data);
+    const url = includeDeleted ? "matgattribute/list/?include_deleted=true" : "matgattribute/list/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createMaterialAttribute = (token, data) => {

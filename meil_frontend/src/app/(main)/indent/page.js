@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2, ShoppingCart, Download, Upload, FileText, Package, ArrowLeft, Loader2 } from "lucide-react";
 import { fetchRequests, createRequest, updateRequest, deleteRequest } from "../../../lib/api";
 import {useAuth} from "@/context/AuthContext";
+import { useSortableData } from "@/hooks/useSortableData";
 
 export default function IndentPage() {
     const [requests, setRequests] = useState([]);
@@ -90,6 +91,8 @@ export default function IndentPage() {
         });
         window.dispatchEvent(event);
     };
+
+    const { sortedData: sortedRequests, requestSort, getSortIcon } = useSortableData(requests);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -270,16 +273,16 @@ export default function IndentPage() {
                             <table className="w-full">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request ID</th>
-                                        <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User Text</th>
-                                        <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SAP Item</th>
-                                        <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                        <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('request_id')}>Request ID {getSortIcon('request_id')}</th>
+                                        <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('user_text')}>User Text {getSortIcon('user_text')}</th>
+                                        <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('sap_item')}>SAP Item {getSortIcon('sap_item')}</th>
+                                        <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('status')}>Status {getSortIcon('status')}</th>
+                                        <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('created')}>Created {getSortIcon('created')}</th>
                                         <th className="font-default p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {requests.map((request) => (
+                                    {sortedRequests.map((request) => (
                                         <tr key={request.request_id} className="hover:bg-gray-50 transition-colors">
                                             <td className="font-default p-4 font-mono text-blue-600 font-semibold">{request.request_id}</td>
                                             <td className="p-4">{request.user_text || '-'}</td>

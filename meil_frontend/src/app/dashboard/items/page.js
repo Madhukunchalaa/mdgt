@@ -2,6 +2,7 @@
 "use client";
 import { useState } from "react";
 import { Package, Plus, Edit, Trash2, Search, Box, DollarSign } from "lucide-react";
+import { useSortableData } from "@/hooks/useSortableData";
 
 export default function ItemsPage() {
     const [items, setItems] = useState([
@@ -54,6 +55,7 @@ export default function ItemsPage() {
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.type.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    const { sortedData: sortedItems, requestSort, getSortIcon } = useSortableData(filteredItems);
 
     return (
         <div>
@@ -87,16 +89,16 @@ export default function ItemsPage() {
                 <table className="w-full">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                            <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                            <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                            <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                            <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('name')}>Item {getSortIcon('name')}</th>
+                            <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('type')}>Type {getSortIcon('type')}</th>
+                            <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('quantity')}>Quantity {getSortIcon('quantity')}</th>
+                            <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('price')}>Price {getSortIcon('price')}</th>
+                            <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('status')}>Status {getSortIcon('status')}</th>
                             <th className="p-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                        {filteredItems.map((item) => (
+                        {sortedItems.map((item) => (
                             <tr key={item.id} className="hover:bg-gray-50">
                                 <td className="p-4">
                                     <div className="flex items-center">

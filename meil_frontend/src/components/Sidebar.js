@@ -173,11 +173,6 @@ export default function Sidebar() {
                 </ul>
             </nav>
 
-            {/* Footer */}
-            <div className="p-4 border-t border-white/10 text-xs text-gray-400">
-                © {new Date().getFullYear()} MEIL MDM
-                <p className="mt-1 text-[10px] opacity-70">v2.0 Enhanced</p>
-            </div>
         </aside>
     );
 }

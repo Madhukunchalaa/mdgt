@@ -10,20 +10,19 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+import dj_database_url
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-)i^kgz81m+5b&kwqf6dx#l@e0_uoej_0ft(##uh(z(4aa=-q91'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-)i^kgz81m+5b&kwqf6dx#l@e0_uoej_0ft(##uh(z(4aa=-q91')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = ["*", "localhost", "127.0.0.1", "mdgt-production.up.railway.app", "intuitive-dream-production.up.railway.app"]
 
@@ -80,6 +79,7 @@ MIDDLEWARE = [
     # 🔹 MUST be first (before CommonMiddleware)
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -116,14 +116,13 @@ ASGI_APPLICATION = 'core.asgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'railway',
-        'USER': 'postgres',
-        'PASSWORD': 'eGBurQINWpJTORApayABDxxZXPoZNNOd',
-        'HOST': 'ballast.proxy.rlwy.net',
-        'PORT': '19547',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get(
+            'DATABASE_URL',
+            'postgresql://postgres:123@localhost:5432/mdgt'
+        ),
+        conn_max_age=600,
+    )
 }
 SIMPLE_JWT = {
     "USER_ID_FIELD": "emp_id",   # ✅ use emp_id from Employee model
@@ -186,6 +185,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

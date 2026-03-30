@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, Loader2, User, Building2, ShieldCheck, Search, Filter, Users, Sparkles, CheckSquare, Square, Check,Mail } from "lucide-react";
 import {useAuth} from "@/context/AuthContext";
+import { useSortableData } from "@/hooks/useSortableData";
 
 export default function ApprovalsPage() {
     const [employees, setEmployees] = useState([]);
@@ -204,6 +205,8 @@ export default function ApprovalsPage() {
     };
 
 
+    const { sortedData: sortedEmployees, requestSort, getSortIcon } = useSortableData(filteredEmployees);
+
     return (
         <div className="p-6 max-w-7xl mx-auto">
             {/* <div className="flex items-center gap-2 mb-2">
@@ -315,9 +318,9 @@ export default function ApprovalsPage() {
                             <thead>
                                 <tr className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white uppercase tracking-wide">
                                     <th className="px-6 py-4 text-left text-sm font-semibold">Select</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold">Employee</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold">Company</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold">Role</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('emp_name')}>Employee {getSortIcon('emp_name')}</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('company_name')}>Company {getSortIcon('company_name')}</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('role_name')}>Role {getSortIcon('role_name')}</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold">Actions</th>
                                 </tr>
                             </thead>
@@ -360,16 +363,16 @@ export default function ApprovalsPage() {
                                             )}
                                         </button>
                                     </th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold">Employee</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold">Company</th>
-                                    <th className="px-6 py-4 text-left text-sm font-semibold">Role</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('emp_name')}>Employee {getSortIcon('emp_name')}</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('company_name')}>Company {getSortIcon('company_name')}</th>
+                                    <th className="px-6 py-4 text-left text-sm font-semibold cursor-pointer select-none" onClick={() => requestSort('role_name')}>Role {getSortIcon('role_name')}</th>
                                     <th className="px-6 py-4 text-left text-sm font-semibold">Actions</th>
                                 </tr>
                             </thead>
 
                             {/* Table Body */}
                             <tbody>
-                                {filteredEmployees.map((emp, index) => (
+                                {sortedEmployees.map((emp, index) => (
                                     <tr
                                         key={emp.emp_id}
                                         className={`transition-all duration-300 hover:bg-purple-50 ${

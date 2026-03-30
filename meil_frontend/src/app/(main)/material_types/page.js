@@ -11,10 +11,12 @@ import {
   deleteMaterialType 
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
+import { useSortableData } from "@/hooks/useSortableData";
 import ViewModal from "@/components/ViewModal"; 
 
 export default function MaterialTypesPage() {
   const [types, setTypes] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -35,13 +37,14 @@ export default function MaterialTypesPage() {
     loadMaterialTypes();
   }, [token]);
 
+  useEffect(() => {
+    if (token) loadMaterialTypes();
+  }, [showDeleted]);
+
   const loadMaterialTypes = async () => {
     try {
       setLoading(true);
-      // const token = localStorage.getItem("token");
-   
-      
-      const data = await fetchMaterialTypes(token);
+      const data = await fetchMaterialTypes(token, showDeleted);
       setTypes(data || []);
     } catch (err) {
       setError("Failed to load material types: " + (err.message || "Unknown error"));
@@ -60,11 +63,13 @@ export default function MaterialTypesPage() {
     return matchesSearch;
   });
 
+  const { sortedData: sortedTypes, requestSort, getSortIcon } = useSortableData(filteredTypes);
+
   // Pagination logic
-  const totalPages = Math.ceil(filteredTypes.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedTypes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentTypes = filteredTypes.slice(startIndex, endIndex);
+  const currentTypes = sortedTypes.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -198,6 +203,13 @@ export default function MaterialTypesPage() {
                 className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Trash2 size={14} className="mr-1.5" />
+              {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+            </button>
             {checkPermission("type", "create") && (
               <button
                 onClick={handleAddNew}
@@ -238,24 +250,12 @@ export default function MaterialTypesPage() {
     <table className="w-full border-separate border-spacing-0">
       <thead className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white shadow-md">
         <tr>
-          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none">
-            Code
-          </th>
-          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
-            Description
-          </th>
-          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
-            Created
-          </th>
-          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
-            Created By
-          </th>
-          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
-            Updated
-          </th>
-          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">
-            Actions
-          </th>
+          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('mat_type_code')}>Code{getSortIcon('mat_type_code')}</th>
+          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('mat_type_desc')}>Description{getSortIcon('mat_type_desc')}</th>
+          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('created')}>Created{getSortIcon('created')}</th>
+          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('createdby')}>Created By{getSortIcon('createdby')}</th>
+          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none" onClick={() => requestSort('updated')}>Updated{getSortIcon('updated')}</th>
+          <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -264,12 +264,15 @@ export default function MaterialTypesPage() {
             <tr
               key={type.mat_type_code}
               className={`transition-all duration-200 ${
-                index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
-              } hover:bg-purple-50`}
+                type.is_deleted ? 'bg-red-50 opacity-75' : index % 2 === 0 ? "bg-gray-50 hover:bg-purple-50" : "bg-gray-100 hover:bg-purple-50"
+              }`}
             >
               <td className="px-3 py-2">
-                <div className="inline-block px-1.5 py-0.5 bg-purple-100 text-purple-800 font-mono rounded-md shadow-sm text-xs">
-                  {type.mat_type_code}
+                <div className="flex items-center gap-1.5">
+                  <div className="inline-block px-1.5 py-0.5 bg-purple-100 text-purple-800 font-mono rounded-md shadow-sm text-xs">
+                    {type.mat_type_code}
+                  </div>
+                  {type.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}
                 </div>
               </td>
               <td className="px-3 py-2 text-gray-900 text-xs">{type.mat_type_desc}</td>
@@ -342,8 +345,8 @@ export default function MaterialTypesPage() {
       <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
         <p className="text-xs text-gray-700">
           Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-          <span className="font-medium">{Math.min(endIndex, filteredTypes.length)}</span> of{' '}
-          <span className="font-medium">{filteredTypes.length}</span> results
+          <span className="font-medium">{Math.min(endIndex, sortedTypes.length)}</span> of{' '}
+          <span className="font-medium">{sortedTypes.length}</span> results
         </p>
         <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
           <button

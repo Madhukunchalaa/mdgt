@@ -138,15 +138,6 @@ const navItems = permissionRouteMap.filter((route) => {
                     </ul>
                 </nav>
 
-                {/* Footer */}
-                <div className="p-4 border-t border-violet-600/30 text-xs text-violet-300 bg-violet-800/30">
-                    <div className="flex justify-between items-center">
-                        <span>© {new Date().getFullYear()} Admin Dashboard</span>
-                        <span className="bg-purple-600/30 text-purple-200 px-2 py-1 rounded-md text-[10px]">
-                            v2.0
-                        </span>
-                    </div>
-                </div>
             </aside>
         </>
     );

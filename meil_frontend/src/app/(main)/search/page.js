@@ -7,19 +7,29 @@ import SearchableDropdown from "@/components/SearchableDropdown";
 import { Loader2, Star } from "lucide-react";
 
 export default function MaterialSearchPage() {
+  const router = useRouter();
+
   // Section 1 states (existing)
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("");
-  const router = useRouter();
 
-  // Section 2 states
-  const [searchTab, setSearchTab] = useState("freeText"); // "freeText", "drillDown", "materialGroup"
+  // Section 2 states - restored from sessionStorage on back-navigation
+  const [searchTab, setSearchTab] = useState(() => {
+    if (typeof window !== "undefined") return sessionStorage.getItem("search_searchTab") || "freeText";
+    return "freeText";
+  });
 
   // Search type filter - maps to MatGroup.search_type
-  const [searchType, setSearchType] = useState(""); // "service", "Materials", "spares", or "" for all
+  const [searchType, setSearchType] = useState(() => {
+    if (typeof window !== "undefined") return sessionStorage.getItem("search_searchType") || "";
+    return "";
+  });
 
   // Free text search states
-  const [freeTextQuery, setFreeTextQuery] = useState("");
+  const [freeTextQuery, setFreeTextQuery] = useState(() => {
+    if (typeof window !== "undefined") return sessionStorage.getItem("search_freeTextQuery") || "";
+    return "";
+  });
   const [freeTextResults, setFreeTextResults] = useState([]);
   const [freeTextLoading, setFreeTextLoading] = useState(false);
   const [selectedFreeTextGroup, setSelectedFreeTextGroup] = useState("");
@@ -71,6 +81,11 @@ export default function MaterialSearchPage() {
   const handleSelectClick = () => {
     if (selectedGroup) router.push(`/materials/${selectedGroup}`);
   };
+
+  // Persist search state to sessionStorage so it survives back-navigation
+  useEffect(() => { sessionStorage.setItem("search_searchTab", searchTab); }, [searchTab]);
+  useEffect(() => { sessionStorage.setItem("search_searchType", searchType); }, [searchType]);
+  useEffect(() => { sessionStorage.setItem("search_freeTextQuery", freeTextQuery); }, [freeTextQuery]);
 
   // Load super groups for drill down search
   useEffect(() => {
@@ -842,7 +857,7 @@ export default function MaterialSearchPage() {
                             </div>
                             <div className="flex items-center gap-1.5">
                               <div className="text-xs bg-green-400 text-white px-1.5 py-0.5 font-mono rounded-md">
-                                Rank: {rank}
+                                Hits: {rank}
                               </div>
                               <button
                                 onClick={(e) => handleToggleFavorite(code, e)}
@@ -877,18 +892,7 @@ export default function MaterialSearchPage() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Quick Actions</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-3 rounded-md transition-colors">Create New Request</button>
-                    <button 
-                      onClick={() => setIsFavoritesModalOpen(true)}
-                      className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-3 rounded-md transition-colors"
-                    >
-                      View Favorites
-                    </button>
-                  </div>
-                </div>
+               
               </>
             )}
 

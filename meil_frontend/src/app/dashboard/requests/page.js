@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import {
     Plus, Edit, Trash2, Search, FileText, Info, Loader2, Eye, MessageSquare, Save, X, Tag, Bell
 } from "lucide-react";
+import { useSortableData } from "@/hooks/useSortableData";
 import {
     fetchRequests,
     createRequest,
@@ -111,7 +112,8 @@ export default function RequestsPage() {
     
         return matchesSearch;
     });
-    
+    const { sortedData: sortedRequests, requestSort, getSortIcon } = useSortableData(filteredRequests);
+
     // Modal handlers
     const handleAddNew = () => {
         setEditingRequest(null);
@@ -417,20 +419,19 @@ export default function RequestsPage() {
                             <table className="w-full">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Project Code</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none" onClick={() => requestSort('request_id')}>ID{getSortIcon('request_id')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none" onClick={() => requestSort('type')}>Type{getSortIcon('type')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none" onClick={() => requestSort('project_code')}>Project Code{getSortIcon('project_code')}</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Messages</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created By</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none" onClick={() => requestSort('createdby')}>Created By{getSortIcon('createdby')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none" onClick={() => requestSort('created')}>Created{getSortIcon('created')}</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {filteredRequests.length > 0 ? (
-                                        filteredRequests.map((request) => (
+                                    {sortedRequests.length > 0 ? (
+                                        sortedRequests.map((request) => (
                                           <tr key={request.request_id} className="hover:bg-gray-50">
                                           <td
   onClick={() => router.push(`/requests/${request.request_id}`)}

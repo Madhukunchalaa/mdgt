@@ -22,7 +22,8 @@ def list_email_domains(request):
     if request.method != "GET":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
-    domains = EmailDomain.objects.filter(is_deleted=False)
+    include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
+    domains = EmailDomain.objects.filter(is_deleted=True) if include_deleted else EmailDomain.objects.filter(is_deleted=False)
     data = [
         {
             "emaildomain_id": d.emaildomain_id,
@@ -30,7 +31,8 @@ def list_email_domains(request):
             "created": d.created,
             "createdby": d.createdby.emp_name if d.createdby else None,
             "updated": d.updated,
-            "updatedby": d.updatedby.emp_name if d.updatedby else None
+            "updatedby": d.updatedby.emp_name if d.updatedby else None,
+            "is_deleted": d.is_deleted,
         }
         for d in domains
     ]

@@ -46,7 +46,7 @@ from Employee.models import Employee
 
 class ItemMaster(models.Model):
     local_item_id = models.AutoField(primary_key=True)
-    sap_item_id = models.IntegerField(null=True, blank=True)
+    sap_item_id = models.BigIntegerField(null=True, blank=True)
 
     mat_type_code = models.ForeignKey(
         "MaterialType.MaterialType",

@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "daphne -b 0.0.0.0 -p $PORT core.asgi:application"
+startCommand = "python manage.py migrate --no-input && python manage.py collectstatic --no-input && daphne -b 0.0.0.0 -p $PORT core.asgi:application"
 healthcheckPath = "/admin/"
-healthcheckTimeout = 30
+healthcheckTimeout = 60
 restartPolicyType = "on_failure"

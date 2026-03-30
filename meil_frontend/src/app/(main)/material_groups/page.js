@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Plus, Edit, Trash2, Search, Folder, Info, Loader2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CheckCircle, PlusCircle, FolderOpen, Eye
+  Plus, Edit, Trash2, Search, Folder, Info, Loader2, ChevronLeft, ChevronRight, CheckCircle, PlusCircle, FolderOpen, Eye
 } from "lucide-react";
 import { 
   fetchMaterialGroups, 
@@ -12,6 +12,7 @@ import {
   fetchSuperGroups
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
+import { useSortableData } from "@/hooks/useSortableData";
 import BackButton from "@/components/BackButton";
 import SearchableDropdown from "@/components/SearchableDropdown";
 import ViewModal from "@/components/ViewModal";
@@ -19,6 +20,7 @@ import ViewModal from "@/components/ViewModal";
 export default function MaterialGroupsPage() {
   const [groups, setGroups] = useState([]);
   const [superGroups, setSuperGroups] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -29,8 +31,6 @@ export default function MaterialGroupsPage() {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
-  const [sortField, setSortField] = useState('mgrp_code');
-  const [sortDirection, setSortDirection] = useState('asc');
   
   const {user,token,role,checkPermission} = useAuth();
   
@@ -56,15 +56,18 @@ export default function MaterialGroupsPage() {
     }
   }, [token]);
 
+  useEffect(() => {
+    if (token) loadMaterialGroups();
+  }, [showDeleted]);
+
   const loadMaterialGroups = async () => {
     if (!token) {
-      // setError("No authentication token found");
       return;
   }
     try {
       setLoading(true);
-      
-      const data = await fetchMaterialGroups(token);
+
+      const data = await fetchMaterialGroups(token, showDeleted);
       setGroups(data || []);
     } catch (err) {
       setError("Failed to load material groups: " + (err.message || "Unknown error"));
@@ -96,12 +99,7 @@ export default function MaterialGroupsPage() {
     return matchesSearch;
   });
 
-  // Sort groups
-  const sortedGroups = [...filteredGroups].sort((a, b) => {
-    if (a[sortField] < b[sortField]) return sortDirection === 'asc' ? -1 : 1;
-    if (a[sortField] > b[sortField]) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
+  const { sortedData: sortedGroups, requestSort, getSortIcon } = useSortableData(filteredGroups, 'mgrp_code');
 
   // Pagination
   const totalPages = Math.ceil(sortedGroups.length / itemsPerPage);
@@ -113,23 +111,6 @@ export default function MaterialGroupsPage() {
     setCurrentPage(page);
   };
 
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-    setCurrentPage(1);
-  };
-
-  const SortIcon = ({ field }) => {
-    if (sortField !== field) return <ChevronUp size={16} className="text-blue-200 opacity-50" />;
-    
-    return sortDirection === 'asc' 
-      ? <ChevronUp size={16} className="text-blue-600" /> 
-      : <ChevronDown size={16} className="text-blue-600" />;
-  };
 
   // Modal handlers
   const handleAddNew = () => {
@@ -247,6 +228,13 @@ export default function MaterialGroupsPage() {
               <span className="font-medium text-blue-600">{filteredGroups.length}</span>
               <span className="ml-1">groups found</span>
             </div>
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Trash2 size={14} className="mr-1.5" />
+              {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+            </button>
             {checkPermission("group", "create") && (
               <button
                 onClick={handleAddNew}
@@ -288,28 +276,12 @@ export default function MaterialGroupsPage() {
     {/* Table Header */}
     <thead>
       <tr className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white uppercase tracking-wide">
-        <th
-          className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none hover:brightness-110 transition-all duration-300"
-          onClick={() => handleSort('mgrp_code')}
-        >
-          <div className="flex items-center gap-1">
-            Code
-            <SortIcon field="mgrp_code" />
-          </div>
-        </th>
-        <th className="px-3 py-2 text-left text-xs font-semibold">Short Name</th>
-        <th className="px-3 py-2 text-left text-xs font-semibold">Long Name</th>
-        <th className="px-3 py-2 text-left text-xs font-semibold">Super Group</th>
-        <th className="px-3 py-2 text-left text-xs font-semibold">Search Type</th>
-        <th
-          className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none hover:brightness-110 transition-all duration-300"
-          onClick={() => handleSort('created')}
-        >
-          <div className="flex items-center gap-1">
-            Created
-            <SortIcon field="created" />
-          </div>
-        </th>
+        <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('mgrp_code')}>Code{getSortIcon('mgrp_code')}</th>
+        <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('mgrp_shortname')}>Short Name{getSortIcon('mgrp_shortname')}</th>
+        <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('mgrp_longname')}>Long Name{getSortIcon('mgrp_longname')}</th>
+        <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('sgrp_code')}>Super Group{getSortIcon('sgrp_code')}</th>
+        <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('search_type')}>Search Type{getSortIcon('search_type')}</th>
+        <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('created')}>Created{getSortIcon('created')}</th>
         <th className="px-3 py-2 text-left text-xs font-semibold">Actions</th>
       </tr>
     </thead>
@@ -320,13 +292,18 @@ export default function MaterialGroupsPage() {
         currentGroups.map((group, index) => (
           <tr
             key={group.mgrp_code}
-            className={`transition-all duration-300 hover:bg-purple-50 ${
-              index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
+            className={`transition-all duration-300 ${
+              group.is_deleted
+                ? 'bg-red-50 opacity-75'
+                : index % 2 === 0 ? "bg-gray-50 hover:bg-purple-50" : "bg-gray-100 hover:bg-purple-50"
             }`}
           >
             <td className="px-3 py-2">
-              <div className="text-xs font-medium text-gray-900 font-mono bg-purple-50 px-1.5 py-0.5 rounded-md inline-block shadow-sm">
-                {group.mgrp_code}
+              <div className="flex items-center gap-1.5">
+                <div className="text-xs font-medium text-gray-900 font-mono bg-purple-50 px-1.5 py-0.5 rounded-md inline-block shadow-sm">
+                  {group.mgrp_code}
+                </div>
+                {group.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}
               </div>
             </td>
             <td className="px-3 py-2">
@@ -397,14 +374,16 @@ export default function MaterialGroupsPage() {
             <div className="flex flex-col items-center justify-center text-gray-400">
               <FolderOpen size={32} className="mb-2 opacity-50" />
               <p className="text-sm font-medium text-gray-500 mb-1">
-                {groups.length === 0 ? "No material groups found" : "No groups match your criteria"}
+                {showDeleted ? "No deleted groups found" : groups.length === 0 ? "No material groups found" : "No groups match your criteria"}
               </p>
               <p className="text-xs">
-                {groups.length === 0
+                {showDeleted
+                  ? "No material groups have been deleted yet"
+                  : groups.length === 0
                   ? "Get started by adding a new material group"
                   : "Try adjusting your search or filter"}
               </p>
-              {groups.length === 0 && checkPermission("group", "create") && (
+              {!showDeleted && groups.length === 0 && checkPermission("group", "create") && (
                 <button
                   onClick={handleAddNew}
                   className="mt-2 inline-flex items-center px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md shadow hover:bg-purple-700 transition duration-300"

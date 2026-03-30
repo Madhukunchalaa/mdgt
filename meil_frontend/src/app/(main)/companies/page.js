@@ -11,9 +11,11 @@ import {
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
 import ViewModal from "@/components/ViewModal";
+import { useSortableData } from "@/hooks/useSortableData";
 
 export default function CompaniesPage() {
   const [companies, setCompanies] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -30,7 +32,11 @@ export default function CompaniesPage() {
   // Load data on component mount
   useEffect(() => {
     loadCompanies();
-  }, []);
+  }, [token]);
+
+  useEffect(() => {
+    if (token) loadCompanies();
+  }, [showDeleted]);
 
   const loadCompanies = async () => {
     try {
@@ -40,8 +46,8 @@ export default function CompaniesPage() {
         setError("No authentication token found");
         return;
       }
-      
-      const data = await fetchCompanies(token);
+
+      const data = await fetchCompanies(token, showDeleted);
       setCompanies(data || []);
     } catch (err) {
       setError("Failed to load companies: " + (err.message || "Unknown error"));
@@ -58,6 +64,7 @@ export default function CompaniesPage() {
 
     return matchesSearch;
   });
+  const { sortedData: sortedCompanies, requestSort, getSortIcon } = useSortableData(filteredCompanies);
 
   // const role = localStorage.getItem("role");
 
@@ -183,6 +190,13 @@ export default function CompaniesPage() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Trash2 size={14} className="mr-1.5" />
+              {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+            </button>
           </div>
         </div>
 
@@ -214,17 +228,22 @@ export default function CompaniesPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="font-default px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company Name</th>
-                    <th className="font-default px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                    <th className="font-default px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
+                    <th className="font-default px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none" onClick={() => requestSort('company_name')}>Company Name{getSortIcon('company_name')}</th>
+                    <th className="font-default px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none" onClick={() => requestSort('created')}>Created{getSortIcon('created')}</th>
+                    <th className="font-default px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none" onClick={() => requestSort('updated')}>Updated{getSortIcon('updated')}</th>
                     <th className="font-default px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredCompanies.length > 0 ? (
-                    filteredCompanies.map((company) => (
-                      <tr key={company.company_name} className="hover:bg-gray-50">
-                        <td className="font-default px-6 py-4 text-sm font-medium text-gray-900">{company.company_name}</td>
+                  {sortedCompanies.length > 0 ? (
+                    sortedCompanies.map((company, index) => (
+                      <tr key={company.company_name} className={`${company.is_deleted ? 'bg-red-50 opacity-75' : index % 2 === 0 ? "bg-gray-50 hover:bg-purple-50" : "bg-gray-100 hover:bg-purple-50"}`}>
+                        <td className="font-default px-6 py-4 text-sm font-medium text-gray-900">
+                          <div className="flex items-center gap-2">
+                            {company.company_name}
+                            {company.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}
+                          </div>
+                        </td>
                         <td className="px-6 py-4 text-sm text-gray-900">{company.created}</td>
                         <td className="px-6 py-4 text-sm text-gray-900">{company.updated}</td>
                         <td className="px-6 py-4 text-sm text-gray-900">

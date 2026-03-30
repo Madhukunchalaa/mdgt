@@ -37,9 +37,9 @@ def create_company(request):
 # @restrict(roles=["Admin", "SuperAdmin"])
 def list_companies(request):
     if request.method == "GET":
-        companies = Company.objects.filter(is_deleted=False).values(
-            "company_name", "created", "updated", "contact"
-        )
+        include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
+        qs = Company.objects.filter(is_deleted=True) if include_deleted else Company.objects.filter(is_deleted=False)
+        companies = qs.values("company_name", "created", "updated", "contact", "is_deleted")
         return JsonResponse(list(companies), safe=False)
 
 # Public endpoint for registration (no authentication required)

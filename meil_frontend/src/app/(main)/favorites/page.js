@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Star, Search, Loader2, Trash2, Eye, Package, Share2, Users } from "lucide-react";
 import { fetchFavorites, removeFavorite, shareMaterial, fetchSharedMaterials, fetchEmployees } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useSortableData } from "@/hooks/useSortableData";
 import BackButton from "@/components/BackButton";
 
 export default function FavoritesPage() {
@@ -204,6 +205,7 @@ export default function FavoritesPage() {
 
   const currentData = activeTab === "favorites" ? filteredFavorites : filteredSharedMaterials;
   const currentDataLength = activeTab === "favorites" ? favorites.length : sharedMaterials.length;
+  const { sortedData: sortedCurrentData, requestSort, getSortIcon } = useSortableData(currentData);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -287,20 +289,20 @@ export default function FavoritesPage() {
               <table className="w-full border-collapse">
                 <thead className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 text-white">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Item Description</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Long Name</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Local Item ID</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase">SAP Item ID</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Material Group</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('item_desc')}>Item Description {getSortIcon('item_desc')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('item_long_name')}>Long Name {getSortIcon('item_long_name')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('local_item_id')}>Local Item ID {getSortIcon('local_item_id')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('sap_item_id')}>SAP Item ID {getSortIcon('sap_item_id')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('mgrp_code')}>Material Group {getSortIcon('mgrp_code')}</th>
                     {activeTab === "shared" && (
-                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Shared By</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('shared_by_name')}>Shared By {getSortIcon('shared_by_name')}</th>
                     )}
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Date</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('created')}>Date {getSortIcon('created')}</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {currentData.map((item, index) => {
+                  {sortedCurrentData.map((item, index) => {
                     const itemName = item.item_desc || "Material";
                     const itemLongName = item.item_long_name;
                     const mgrpCode = item.mgrp_code;

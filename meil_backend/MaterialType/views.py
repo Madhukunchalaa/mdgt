@@ -158,7 +158,8 @@ def create_material_type(request):
 def list_material_types(request):
     if request.method == "GET":
         try:
-            materials = MaterialType.objects.filter(is_deleted=False)
+            include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
+            materials = MaterialType.objects.filter(is_deleted=True) if include_deleted else MaterialType.objects.filter(is_deleted=False)
             data = []
             for m in materials:
                 data.append({
@@ -167,7 +168,8 @@ def list_material_types(request):
                     "created": m.created.strftime("%Y-%m-%d %H:%M:%S"),
                     "updated": m.updated.strftime("%Y-%m-%d %H:%M:%S"),
                     "createdby": get_employee_name(m.createdby),
-                    "updatedby": get_employee_name(m.updatedby)
+                    "updatedby": get_employee_name(m.updatedby),
+                    "is_deleted": m.is_deleted,
                 })
             return JsonResponse(data, safe=False, status=200)
         except Exception as e:

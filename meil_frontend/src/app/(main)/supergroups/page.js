@@ -7,9 +7,11 @@ import { fetchSuperGroups, createSuperGroup, updateSuperGroup, deleteSuperGroup 
 import {useAuth} from "@/context/AuthContext";
 import BackButton from "@/components/BackButton";
 import ViewModal from "@/components/ViewModal";
+import { useSortableData } from "@/hooks/useSortableData";
 
 export default function SupergroupsPage() {
   const [supergroups, setSupergroups] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -65,12 +67,16 @@ export default function SupergroupsPage() {
     loadSupergroups();
   }, [token]);
 
+  useEffect(() => {
+    if (token) loadSupergroups();
+  }, [showDeleted]);
+
   const loadSupergroups = async () => {
     try {
       setLoading(true);
       setError(null);
       // const token = localStorage.getItem("token");
-      const data = await fetchSuperGroups(token);
+      const data = await fetchSuperGroups(token, showDeleted);
       setSupergroups(data);
     } catch (err) {
       setError("Failed to load supergroups: " + (err.response?.data?.error || err.message));
@@ -90,11 +96,13 @@ export default function SupergroupsPage() {
     return matchesSearch;
   });
 
+  const { sortedData: sortedSupergroups, requestSort, getSortIcon } = useSortableData(filteredSupergroups);
+
   // Pagination logic
-  const totalPages = Math.ceil(filteredSupergroups.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedSupergroups.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentSupergroups = filteredSupergroups.slice(startIndex, endIndex);
+  const currentSupergroups = sortedSupergroups.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -223,6 +231,13 @@ export default function SupergroupsPage() {
                 className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Trash2 size={14} className="mr-1.5" />
+              {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+            </button>
             {checkPermission("super", "create") && (
               <button
                 onClick={handleAddNew}
@@ -265,11 +280,11 @@ export default function SupergroupsPage() {
         {/* Table Header */}
         <thead className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white">
           <tr>
-            <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Code</th>
-            <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Name</th>
-            <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Department</th>
-            <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Created</th>
-            <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Created By</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('sgrp_code')}>Code{getSortIcon('sgrp_code')}</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('sgrp_name')}>Name{getSortIcon('sgrp_name')}</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('dept_name')}>Department{getSortIcon('dept_name')}</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('created')}>Created{getSortIcon('created')}</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('createdby')}>Created By{getSortIcon('createdby')}</th>
             <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Actions</th>
           </tr>
         </thead>
@@ -280,13 +295,14 @@ export default function SupergroupsPage() {
             currentSupergroups.map((supergroup, index) => (
               <tr
                 key={supergroup.sgrp_code}
-                className={`transition-all duration-200 ${
-                  index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
-                } hover:bg-purple-50`}
+                className={`transition-all duration-200 ${supergroup.is_deleted ? 'bg-red-50 opacity-75' : index % 2 === 0 ? "bg-gray-50 hover:bg-purple-50" : "bg-gray-100 hover:bg-purple-50"}`}
               >
                 <td className="px-3 py-2">
-                  <div className="inline-block px-1.5 py-0.5 bg-purple-100 text-purple-800 font-mono rounded-md text-xs shadow-sm">
-                    {supergroup.sgrp_code}
+                  <div className="flex items-center gap-1.5">
+                    <div className="inline-block px-1.5 py-0.5 bg-purple-100 text-purple-800 font-mono rounded-md text-xs shadow-sm">
+                      {supergroup.sgrp_code}
+                    </div>
+                    {supergroup.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}
                   </div>
                 </td>
                 <td className="px-3 py-2 text-xs text-gray-900">{supergroup.sgrp_name}</td>

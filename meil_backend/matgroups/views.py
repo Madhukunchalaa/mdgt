@@ -3,6 +3,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils import timezone
 import json
+import re
+from django.db import IntegrityError
 from .models import MatGroup
 from supergroups.models import SuperGroup
 from Employee.models import Employee
@@ -23,10 +25,10 @@ def create_matgroup(request):
         try:
             data = json.loads(request.body.decode("utf-8"))
 
-            mgrp_code = data.get("mgrp_code")
-            sgrp_code = data.get("sgrp_code",None)
-            mgrp_shortname = data.get("mgrp_shortname",None)
-            mgrp_longname = data.get("mgrp_longname",None)
+            mgrp_code = data.get("mgrp_code", "").strip().upper()
+            sgrp_code = data.get("sgrp_code", None)
+            mgrp_shortname = data.get("mgrp_shortname", None)
+            mgrp_longname = data.get("mgrp_longname", None)
             search_type = data.get("search_type", "Materials")
             attribgrpid = data.get("attribgrpid", None)
             notes = data.get("notes", "")
@@ -34,6 +36,16 @@ def create_matgroup(request):
 
             if not mgrp_code:
                 return JsonResponse({"error": "Required fields: mgrp_code, sgrp_code, mgrp_shortname, mgrp_longname"}, status=400)
+
+            # Validate: mgrp_code must be alpha only, max 9 characters
+            if len(mgrp_code) > 9:
+                return JsonResponse({"error": "Material Group code must be at most 9 characters"}, status=400)
+            if not mgrp_code.isalpha():
+                return JsonResponse({"error": "Material Group code must contain only alphabetic characters (no numbers or special characters)"}, status=400)
+
+            # Check for duplicate
+            if MatGroup.objects.filter(mgrp_code=mgrp_code).exists():
+                return JsonResponse({"error": f"Material Group with code '{mgrp_code}' already exists"}, status=400)
 
             # ✅ Check if SuperGroup exists
             supergroup = SuperGroup.objects.filter(sgrp_code=sgrp_code, is_deleted=False).first()
@@ -81,6 +93,8 @@ def create_matgroup(request):
 
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except IntegrityError:
+            return JsonResponse({"error": "A Material Group with this code already exists"}, status=400)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
@@ -93,7 +107,8 @@ def create_matgroup(request):
 def list_matgroups(request):
     if request.method == "GET":
         try:
-            matgroups = MatGroup.objects.filter(is_deleted=False)
+            include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
+            matgroups = MatGroup.objects.filter(is_deleted=True) if include_deleted else MatGroup.objects.filter(is_deleted=False)
             response_data = []
             for mg in matgroups:
                 response_data.append({
@@ -108,7 +123,8 @@ def list_matgroups(request):
                     "created": mg.created.strftime("%Y-%m-%d %H:%M:%S") if mg.created else None,
                     "updated": mg.updated.strftime("%Y-%m-%d %H:%M:%S") if mg.updated else None,
                     "createdby": get_employee_name(mg.createdby),
-                    "updatedby": get_employee_name(mg.updatedby)
+                    "updatedby": get_employee_name(mg.updatedby),
+                    "is_deleted": mg.is_deleted,
                 })
             return JsonResponse(response_data, safe=False)
         except Exception as e:

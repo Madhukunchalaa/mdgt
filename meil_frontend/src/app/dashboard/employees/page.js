@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Users, Plus, Edit, Trash2, Search, Mail, Building, Calendar, User, RefreshCw, PlusCircle } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext"; // 👈 import AuthContext
+import { useSortableData } from "@/hooks/useSortableData";
 
 export default function EmployeesPage() {
     const { token, user, loading, checkPermission } = useAuth(); // 👈 use token and checkPermission
@@ -171,6 +172,8 @@ export default function EmployeesPage() {
             employee.company?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const { sortedData: sortedEmployees, requestSort, getSortIcon } = useSortableData(filteredEmployees);
+
     if (loading) return <p className="text-center p-6">Loading...</p>;
 
     return (
@@ -225,37 +228,21 @@ export default function EmployeesPage() {
                             {/* Table Header */}
                             <thead>
                                 <tr className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white uppercase tracking-wide">
-                                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none hover:brightness-110 transition-all duration-300">
-                                        Employee
-                                    </th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold">
-                                        Role
-                                    </th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold">
-                                        Company
-                                    </th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold">
-                                        Created
-                                    </th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold">
-                                        Created By
-                                    </th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold">
-                                        Updated
-                                    </th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold">
-                                        Updated By
-                                    </th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold">
-                                        Actions
-                                    </th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('emp_name')}>Employee {getSortIcon('emp_name')}</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('role')}>Role {getSortIcon('role')}</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('company')}>Company {getSortIcon('company')}</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('created')}>Created {getSortIcon('created')}</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('createdby')}>Created By {getSortIcon('createdby')}</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('updated')}>Updated {getSortIcon('updated')}</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('updatedby')}>Updated By {getSortIcon('updatedby')}</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold">Actions</th>
                                 </tr>
                             </thead>
 
                             {/* Table Body */}
                             <tbody>
-                                {filteredEmployees.length > 0 ? (
-                                    filteredEmployees.map((employee, index) => (
+                                {sortedEmployees.length > 0 ? (
+                                    sortedEmployees.map((employee, index) => (
                                         <tr
                                             key={employee.emp_id}
                                             className={`transition-all duration-300 hover:bg-purple-50 ${index % 2 === 0 ? "bg-gray-50" : "bg-gray-100"
