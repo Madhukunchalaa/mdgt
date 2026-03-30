@@ -469,12 +469,25 @@ export default function MaterialsPage() {
       return;
     }
     
+    // Validate SAP Material Number if provided
+    if (formData.sap_item_id?.trim()) {
+      const sapStr = formData.sap_item_id.trim();
+      if (!/^\d+$/.test(sapStr)) {
+        setError("SAP Material Number must be numeric (digits only)");
+        return;
+      }
+      if (sapStr.length !== 10) {
+        setError("SAP Material Number must be exactly 10 digits");
+        return;
+      }
+    }
+
     // Check if required fields are filled
     const hasMatType = formData.mat_type_code?.trim();
     const hasMgrpCode = formData.mgrp_code?.trim();
     const hasItemDesc = formData.item_desc?.trim();
     const hasAttributes = hasAttributeValues(formData.attributes);
-    
+
     if (!hasMatType || !hasMgrpCode || (!hasItemDesc && !hasAttributes)) {
       setError("Please fill in required fields: Material Type Code, Material Group Code, and either Short Name or Attributes");
       return;
@@ -988,7 +1001,8 @@ export default function MaterialsPage() {
                       value={formData.sap_item_id}
                       onChange={handleInputChange}
                       className="w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Numeric, max 10 digits"
+                      placeholder="Numeric, exactly 10 digits"
+                      maxLength={10}
                     />
                   </div>
 

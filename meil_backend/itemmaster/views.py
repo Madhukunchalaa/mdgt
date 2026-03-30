@@ -61,8 +61,8 @@ def create_itemmaster(request):
             raw_sap_str = str(raw_sap_id).strip()
             if not raw_sap_str.isdigit():
                 return JsonResponse({"error": "SAP Material Number must be numeric (digits only)"}, status=400)
-            if len(raw_sap_str) > 10:
-                return JsonResponse({"error": "SAP Material Number must be at most 10 digits"}, status=400)
+            if len(raw_sap_str) != 10:
+                return JsonResponse({"error": "SAP Material Number must be exactly 10 digits"}, status=400)
             sap_item_id = int(raw_sap_str)
         else:
             sap_item_id = None
@@ -445,8 +445,8 @@ def update_itemmaster(request, local_item_id):
                 raw_sap_str = str(raw_sap_id).strip()
                 if not raw_sap_str.isdigit():
                     return JsonResponse({"error": "SAP Material Number must be numeric (digits only)"}, status=400)
-                if len(raw_sap_str) > 10:
-                    return JsonResponse({"error": "SAP Material Number must be at most 10 digits"}, status=400)
+                if len(raw_sap_str) != 10:
+                    return JsonResponse({"error": "SAP Material Number must be exactly 10 digits"}, status=400)
                 item.sap_item_id = int(raw_sap_str)
             else:
                 item.sap_item_id = None
