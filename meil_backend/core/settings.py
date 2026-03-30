@@ -24,7 +24,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-)i^kgz81m+5b&kwqf6dx#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ["*", "localhost", "127.0.0.1", "mdgt-production.up.railway.app", "intuitive-dream-production.up.railway.app"]
+ALLOWED_HOSTS = ["*", "localhost", "127.0.0.1", "mdgt-production.up.railway.app", "intuitive-dream-production.up.railway.app", "master-data-mangement-production.up.railway.app"]
 
 # AUTH_USER_MODEL = "Users.Employee"
 
