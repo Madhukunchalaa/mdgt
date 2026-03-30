@@ -18,88 +18,59 @@ from .serializers import MatGroupSerializer, MaterialTypeSerializer, ItemMasterS
 @api_view(["POST"])
 def search_groups(request):
     """
-    Free-text hybrid search across Material Groups using BM25 + Trigram.
-    Filters by search_type if provided.
+    Free-text search across Material Groups and their items.
+    Uses icontains as the reliable base, with BM25+Trigram as optional ranking bonus.
     """
     query = request.data.get("query", "").strip()
-    search_type = request.data.get("search_type", None)  # Optional filter by search_type
-    
+    search_type = request.data.get("search_type", None)
+
     if not query:
         return Response({"error": "Field 'query' is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Base queryset with search_type filter
-    base_qs = MatGroup.objects.filter(
-        is_deleted=False,
-        items__is_deleted=False
-    ).distinct()
+    # Base: all non-deleted groups (no items join — groups with no items are still searchable)
+    base_qs = MatGroup.objects.filter(is_deleted=False).distinct()
     if search_type:
         base_qs = base_qs.filter(search_type=search_type)
 
-    search_vector = (
-        SearchVector("items__short_name", weight="A") +
-        SearchVector("items__long_name", weight="A") +
-        SearchVector("items__search_text", weight="B") +
-        SearchVector("notes", weight="A") +  # MatGroup.notes field
-        SearchVector("mgrp_shortname", weight="B") +
-        SearchVector("mgrp_longname", weight="B")
-    )
-    search_query = SearchQuery(query)
+    # Primary: icontains across group fields and related item fields (always works on any PG)
+    matched_groups = base_qs.filter(
+        models.Q(mgrp_code__icontains=query) |
+        models.Q(mgrp_shortname__icontains=query) |
+        models.Q(mgrp_longname__icontains=query) |
+        models.Q(items__short_name__icontains=query) |
+        models.Q(items__long_name__icontains=query) |
+        models.Q(items__search_text__icontains=query)
+    ).distinct()
 
-    # BM25 relevance
-    bm25_qs = (
-        base_qs
-        .annotate(search=search_vector)
-        .annotate(rank=SearchRank(search_vector, search_query))
-        .filter(rank__gte=0.1)
-    )
-
-    # Trigram fuzzy search
-    trigram_qs = (
-        base_qs
-        .annotate(
-            trigram_score=(
-                TrigramSimilarity("items__short_name", query) +
-                TrigramSimilarity("items__long_name", query) +
-                TrigramSimilarity("items__search_text", query) +
-                TrigramSimilarity("notes", query) +  # MatGroup.notes field
+    # Try BM25 + Trigram ranking on top (requires pg_trgm — gracefully skip if unavailable)
+    try:
+        search_vector = (
+            SearchVector("items__short_name", weight="A") +
+            SearchVector("items__long_name", weight="A") +
+            SearchVector("items__search_text", weight="B") +
+            SearchVector("mgrp_shortname", weight="B") +
+            SearchVector("mgrp_longname", weight="B")
+        )
+        search_query = SearchQuery(query)
+        groups = matched_groups.annotate(
+            rank=SearchRank(search_vector, search_query),
+            score=(
                 TrigramSimilarity("mgrp_shortname", query) +
                 TrigramSimilarity("mgrp_longname", query)
             )
-        )
-        .filter(trigram_score__gte=0.2)
-    )
+        ).order_by("-rank", "-score").distinct()
+        # Force evaluation to detect pg_trgm errors early
+        data = [
+            {**MatGroupSerializer(group).data, "score": round(group.score, 2), "rank": round(group.rank * 100, 2)}
+            for group in groups
+        ]
+    except Exception:
+        # Fallback: return matched groups without ranking
+        data = [
+            {**MatGroupSerializer(group).data, "score": 0, "rank": 0}
+            for group in matched_groups
+        ]
 
-    # Simple icontains fallback — catches exact substring matches (e.g. "BLUE" in short_name)
-    icontains_qs = base_qs.filter(
-        models.Q(items__short_name__icontains=query) |
-        models.Q(items__long_name__icontains=query) |
-        models.Q(items__search_text__icontains=query) |
-        models.Q(mgrp_shortname__icontains=query) |
-        models.Q(mgrp_longname__icontains=query)
-    )
-
-    # Merge all results
-    groups = (bm25_qs | trigram_qs | icontains_qs).annotate(
-        rank=SearchRank(search_vector, search_query),
-        score=(
-            TrigramSimilarity("items__short_name", query) +
-            TrigramSimilarity("items__long_name", query) +
-            TrigramSimilarity("items__search_text", query) +
-            TrigramSimilarity("notes", query) +
-            TrigramSimilarity("mgrp_shortname", query) +
-            TrigramSimilarity("mgrp_longname", query)
-        )
-    ).order_by("-rank", "-score").distinct()
-
-    def truncate(num, digits=2):
-        factor = 10.0 ** digits
-        return int(num * factor) / factor
-
-    data = [
-        {**MatGroupSerializer(group).data, "score": group.score,
-         "rank": truncate(group.rank * 100, 2)}
-        for group in groups
-    ]
     return Response(data)
 
 
