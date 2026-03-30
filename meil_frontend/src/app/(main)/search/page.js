@@ -1074,9 +1074,6 @@ export default function MaterialSearchPage() {
           </div>
         </div>
 
-        <div className="bg-gray-100 p-4 text-center text-xs text-gray-500 w-full">
-          © 2023 Company Name. All rights reserved. | v2.4.1
-        </div>
       </div>
 
       {/* Favorites Modal */}

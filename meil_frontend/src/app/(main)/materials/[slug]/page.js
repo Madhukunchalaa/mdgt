@@ -731,10 +731,6 @@ export default function MaterialDetailPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="bg-gray-100 p-2 text-center text-xs text-gray-500">
-        © 2023 Company Name. All rights reserved. | v2.4.1
-      </div>
 
       {/* Favorites List Sidebar */}
       {showFavoritesList && (
