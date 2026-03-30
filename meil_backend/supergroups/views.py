@@ -137,17 +137,18 @@ def update_supergroup(request, sgrp_code):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
-# ✅ HARD DELETE SuperGroup
+# ✅ SOFT DELETE SuperGroup
 @csrf_exempt
 @authenticate
 # @restrict(roles=["Admin", "SuperAdmin","MDGT"])
 def delete_supergroup(request, sgrp_code):
     if request.method == "DELETE":
-        supergroup = SuperGroup.objects.filter(sgrp_code=sgrp_code).first()
+        supergroup = SuperGroup.objects.filter(sgrp_code=sgrp_code, is_deleted=False).first()
         if not supergroup:
             return JsonResponse({"error": "SuperGroup not found"}, status=404)
 
-        supergroup.delete()  # ✅ Hard delete
+        supergroup.is_deleted = True
+        supergroup.save()
         return JsonResponse({"message": "SuperGroup deleted successfully"}, status=200)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
