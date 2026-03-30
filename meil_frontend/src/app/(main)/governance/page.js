@@ -16,7 +16,7 @@ import { useAuth } from "@/context/AuthContext"; // 👈 import AuthContext
 const sections = [
   {
     key: "materials",
-    title: "Item Masters",
+    title: "Material Master",
     description: "Manage material items and inventory",
     icon: Package,
     color: "text-blue-600",
