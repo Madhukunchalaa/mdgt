@@ -26,10 +26,7 @@ export default function MaterialSearchPage() {
   });
 
   // Free text search states
-  const [freeTextQuery, setFreeTextQuery] = useState(() => {
-    if (typeof window !== "undefined") return sessionStorage.getItem("search_freeTextQuery") || "";
-    return "";
-  });
+  const [freeTextQuery, setFreeTextQuery] = useState("");
   const [freeTextResults, setFreeTextResults] = useState([]);
   const [freeTextLoading, setFreeTextLoading] = useState(false);
   const [selectedFreeTextGroup, setSelectedFreeTextGroup] = useState("");
@@ -85,7 +82,6 @@ export default function MaterialSearchPage() {
   // Persist search state to sessionStorage so it survives back-navigation
   useEffect(() => { sessionStorage.setItem("search_searchTab", searchTab); }, [searchTab]);
   useEffect(() => { sessionStorage.setItem("search_searchType", searchType); }, [searchType]);
-  useEffect(() => { sessionStorage.setItem("search_freeTextQuery", freeTextQuery); }, [freeTextQuery]);
 
   // Load super groups for drill down search
   useEffect(() => {
