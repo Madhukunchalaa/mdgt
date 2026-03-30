@@ -228,17 +228,15 @@ export default function MaterialSearchPage() {
   // Fetch similar material groups as user types
   useEffect(() => {
     const fetchSimilarGroups = async () => {
-      if (!materialGroupCode.trim() || materialGroupCode.trim().length < 2) {
+      if (!materialGroupCode.trim() || materialGroupCode.trim().length < 1) {
         setSimilarMaterialGroups([]);
         return;
       }
 
       setLoadingSimilarGroups(true);
       try {
+        // No search_type filter here — user is searching by group code, type is irrelevant
         const body = { query: materialGroupCode };
-        if (searchType) {
-          body.search_type = searchType;
-        }
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/matgroups/search/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -732,7 +730,7 @@ export default function MaterialSearchPage() {
                       className="w-full p-2 text-sm border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                     />
                     {/* Similar Groups Helper */}
-                    {similarMaterialGroups.length > 0 && materialGroupCode.trim().length >= 2 && (
+                    {similarMaterialGroups.length > 0 && materialGroupCode.trim().length >= 1 && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                         <div className="p-1.5 text-xs font-semibold text-gray-500 bg-gray-50 border-b">Similar Material Groups</div>
                         {similarMaterialGroups.map((group) => {
