@@ -88,12 +88,9 @@ const Navbar = () => {
                 <Link href="/help" className="hover:text-pink-500">
                     <HelpCircle size={22} className="text-white" />
                 </Link>
-                <Link href="/notifications" className="hover:text-pink-500 relative">
+                <div className="relative">
                     <Bell size={22} className="text-white" />
-                    <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs rounded-full px-1">
-                        3
-                    </span>
-                </Link>
+                </div>
 
                 {/* Profile dropdown */}
                 <div className="relative" ref={dropdownRef}>
