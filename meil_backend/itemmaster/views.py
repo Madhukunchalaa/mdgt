@@ -461,7 +461,11 @@ def update_itemmaster(request, local_item_id):
         if "is_final" in data:
             item.is_final = data.get("is_final", False)
 
-        # Always rebuild long_name
+        # Always rebuild short_name and long_name so SAP description changes are reflected
+        rebuilt_short = format_short_name(item.sap_name, item.attributes)
+        if rebuilt_short and len(rebuilt_short) >= 3:
+            item.short_name = rebuilt_short
+
         item.long_name = format_long_name(
             item.sap_name,
             item.mgrp_code.mgrp_code if item.mgrp_code else None,

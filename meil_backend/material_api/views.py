@@ -1,4 +1,5 @@
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank, TrigramSimilarity
+from django.db import models
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -68,14 +69,23 @@ def search_groups(request):
         .filter(trigram_score__gte=0.2)
     )
 
-    # Merge both results
-    groups = (bm25_qs | trigram_qs).annotate(
+    # Simple icontains fallback — catches exact substring matches (e.g. "BLUE" in short_name)
+    icontains_qs = base_qs.filter(
+        models.Q(items__short_name__icontains=query) |
+        models.Q(items__long_name__icontains=query) |
+        models.Q(items__search_text__icontains=query) |
+        models.Q(mgrp_shortname__icontains=query) |
+        models.Q(mgrp_longname__icontains=query)
+    )
+
+    # Merge all results
+    groups = (bm25_qs | trigram_qs | icontains_qs).annotate(
         rank=SearchRank(search_vector, search_query),
         score=(
             TrigramSimilarity("items__short_name", query) +
             TrigramSimilarity("items__long_name", query) +
             TrigramSimilarity("items__search_text", query) +
-            TrigramSimilarity("notes", query) +  # MatGroup.notes field
+            TrigramSimilarity("notes", query) +
             TrigramSimilarity("mgrp_shortname", query) +
             TrigramSimilarity("mgrp_longname", query)
         )
