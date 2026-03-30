@@ -415,6 +415,11 @@ export default function RequestDetailPage() {
                     <span className="text-xs text-gray-500 capitalize">
                       • {request.type || "Request"}
                     </span>
+                    {request.project_code && (
+                      <span className="text-xs text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md font-medium">
+                        Project: {request.project_code}
+                      </span>
+                    )}
                     {request.type === 'material' && request.sap_item && (
                       <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md font-medium">
                         Item ID: {request.sap_item}
