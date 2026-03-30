@@ -37,9 +37,9 @@ def create_matgroup(request):
             if not mgrp_code:
                 return JsonResponse({"error": "Required fields: mgrp_code, sgrp_code, mgrp_shortname, mgrp_longname"}, status=400)
 
-            # Validate: mgrp_code must be alpha only, max 9 characters
-            if len(mgrp_code) > 9:
-                return JsonResponse({"error": "Material Group code must be at most 9 characters"}, status=400)
+            # Validate: mgrp_code must be exactly 9 alphabetic characters
+            if len(mgrp_code) != 9:
+                return JsonResponse({"error": "Material Group code must be exactly 9 characters"}, status=400)
             if not mgrp_code.isalpha():
                 return JsonResponse({"error": "Material Group code must contain only alphabetic characters (no numbers or special characters)"}, status=400)
 
