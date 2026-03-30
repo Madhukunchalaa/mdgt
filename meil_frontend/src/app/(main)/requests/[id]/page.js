@@ -312,6 +312,8 @@ export default function RequestDetailPage() {
     switch (status) {
       case "Open":
         return "bg-green-100 text-green-700";
+      case "In Progress":
+        return "bg-blue-100 text-blue-700";
       case "Closed":
         return "bg-gray-200 text-gray-700";
       case "Rejected":
@@ -726,6 +728,7 @@ export default function RequestDetailPage() {
                         className="border rounded-lg p-1.5 text-sm flex-1"
                       >
                         <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
                         <option value="Closed">Closed</option>
                         <option value="Rejected">Rejected</option>
                       </select>
