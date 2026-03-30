@@ -191,6 +191,7 @@ export default function RequestDetailPage() {
       // Refresh request
       const data = await fetchRequests(token);
       const updated = data.find((r) => r.request_id == id);
+      if (updated && updated.type) updated.type = updated.type.toLowerCase();
       setRequest(updated);
 
       setIsEditing(false);
@@ -235,6 +236,7 @@ export default function RequestDetailPage() {
       // refresh request header to reflect SAP item/status if needed
       const data = await fetchRequests(token);
       const updated = data.find((r) => r.request_id == id);
+      if (updated && updated.type) updated.type = updated.type.toLowerCase();
       setRequest(updated);
     } catch (err) {
       window.dispatchEvent(new CustomEvent('showToast', { detail: { type: 'error', message: err.response?.data?.error || 'Failed to assign SAP' } }));
@@ -257,6 +259,7 @@ export default function RequestDetailPage() {
       // refresh request header to reflect material group/status if needed
       const data = await fetchRequests(token);
       const updated = data.find((r) => r.request_id == id);
+      if (updated && updated.type) updated.type = updated.type.toLowerCase();
       setRequest(updated);
     } catch (err) {
       window.dispatchEvent(new CustomEvent('showToast', { detail: { type: 'error', message: err.response?.data?.error || 'Failed to assign Material Group' } }));
@@ -327,6 +330,8 @@ export default function RequestDetailPage() {
           console.log("data : ", data)
           const found = data.find(r => r.request_id == id);
           console.log("found : ", found)
+          // Normalize type to lowercase so comparisons work regardless of how it was stored
+          if (found && found.type) found.type = found.type.toLowerCase();
           setRequest(found);
 
           // Mark request as read when viewing
