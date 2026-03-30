@@ -3,6 +3,6 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "python manage.py migrate --no-input; python manage.py collectstatic --no-input --clear; daphne -b 0.0.0.0 -p $PORT core.asgi:application"
-healthcheckPath = "/api/matgroups/search/"
+healthcheckPath = "/health/"
 healthcheckTimeout = 120
 restartPolicyType = "on_failure"
