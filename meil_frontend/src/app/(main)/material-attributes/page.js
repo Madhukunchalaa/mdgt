@@ -879,7 +879,7 @@ export default function MaterialAttributesPage() {
                     <input
                       type="text"
                       value={editFormData.attribute_name}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, attribute_name: e.target.value }))}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, attribute_name: e.target.value.toUpperCase() }))}
                       className="w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="e.g., Color"
                     />
@@ -1205,7 +1205,7 @@ export default function MaterialAttributesPage() {
                         <input
                           type="text"
                           value={newAttrName}
-                          onChange={(e) => setNewAttrName(e.target.value)}
+                          onChange={(e) => setNewAttrName(e.target.value.toUpperCase())}
                           className="w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="e.g., Color"
                         />
