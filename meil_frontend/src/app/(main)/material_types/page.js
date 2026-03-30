@@ -113,7 +113,7 @@ export default function MaterialTypesPage() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === "mat_type_code" ? value.toUpperCase() : value
     }));
   };
 

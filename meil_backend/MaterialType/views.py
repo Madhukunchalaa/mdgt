@@ -114,7 +114,7 @@ def create_material_type(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body.decode("utf-8"))
-            mat_type_code = data.get("mat_type_code")
+            mat_type_code = (data.get("mat_type_code") or "").strip().upper()
             mat_type_desc = data.get("mat_type_desc")
 
             if not mat_type_code or not mat_type_desc:
