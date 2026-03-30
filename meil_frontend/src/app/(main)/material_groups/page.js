@@ -118,6 +118,7 @@ export default function MaterialGroupsPage() {
     setFormData(formDataDefaults);
     setIsModalOpen(true);
     setError(null);
+    loadSuperGroups();
   };
 
   const handleView = (group) => {
@@ -140,6 +141,7 @@ export default function MaterialGroupsPage() {
     setUomInput("");
     setIsModalOpen(true);
     setError(null);
+    loadSuperGroups();
   };
 
   const handleCloseModal = () => {
