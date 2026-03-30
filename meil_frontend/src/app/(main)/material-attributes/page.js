@@ -128,7 +128,7 @@ export default function MaterialAttributesPage() {
       .filter(a => (a.print_priority || 0) > 0)
       .map(a => a.print_priority || 0);
     const allPriorities = [...existingPriorities, ...formPriorities];
-    return allPriorities.length > 0 ? Math.max(...allPriorities) + 1 : 1;
+    return allPriorities.length > 0 ? Math.max(...allPriorities) + 10 : 10;
   };
 
   // Modal handlers
