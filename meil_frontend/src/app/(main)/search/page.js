@@ -802,15 +802,6 @@ export default function MaterialSearchPage() {
               )}
             </div>
 
-            {/* Recent Searches */}
-            <div className="mt-4">
-              <h3 className="text-xs font-medium text-gray-700 mb-1.5">Recent Searches</h3>
-              <div className="flex flex-wrap gap-1.5">
-                <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs cursor-pointer hover:bg-gray-200">Electrical wires</span>
-                <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs cursor-pointer hover:bg-gray-200">Safety equipment</span>
-                <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs cursor-pointer hover:bg-gray-200">Hand tools</span>
-              </div>
-            </div>
           </div>
 
           {/* Right Section - Results */}
