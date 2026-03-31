@@ -817,7 +817,7 @@ export default function MaterialSearchPage() {
                       const code = group.mgrp_code ?? group.code;
                       const name = group.notes || group.mgrp_longname || group.mgrp_shortname || "";
                       const description = group.mgrp_longname || group.mgrp_shortname || "";
-                      const rank = group.rank ?? "";
+                      const rank = group.hit_count ?? 0;
                       return (
                         <div
                           key={code}

@@ -42,6 +42,16 @@ def search_groups(request):
         models.Q(items__search_text__icontains=query)
     ).distinct()
 
+    # Count matching items per group (always reliable, no pg_trgm needed)
+    item_q = (
+        models.Q(short_name__icontains=query) |
+        models.Q(long_name__icontains=query) |
+        models.Q(search_text__icontains=query)
+    )
+
+    def get_hit_count(group):
+        return ItemMaster.objects.filter(mgrp_code=group, is_deleted=False).filter(item_q).count()
+
     # Try BM25 + Trigram ranking on top (requires pg_trgm — gracefully skip if unavailable)
     try:
         search_vector = (
@@ -61,13 +71,13 @@ def search_groups(request):
         ).order_by("-rank", "-score").distinct()
         # Force evaluation to detect pg_trgm errors early
         data = [
-            {**MatGroupSerializer(group).data, "score": round(group.score, 2), "rank": round(group.rank * 100, 2)}
+            {**MatGroupSerializer(group).data, "score": round(group.score, 2), "rank": round(group.rank * 100, 2), "hit_count": get_hit_count(group)}
             for group in groups
         ]
     except Exception:
         # Fallback: return matched groups without ranking
         data = [
-            {**MatGroupSerializer(group).data, "score": 0, "rank": 0}
+            {**MatGroupSerializer(group).data, "score": 0, "rank": 0, "hit_count": get_hit_count(group)}
             for group in matched_groups
         ]
 
