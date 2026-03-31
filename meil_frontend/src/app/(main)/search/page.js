@@ -821,11 +821,11 @@ export default function MaterialSearchPage() {
                       return (
                         <div
                           key={code}
-                          onClick={() => router.push(`/materials/${code}`)}
+                          onClick={() => router.push(`/materials/${code}?q=${encodeURIComponent(freeTextQuery)}`)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
-                              router.push(`/materials/${code}`);
+                              router.push(`/materials/${code}?q=${encodeURIComponent(freeTextQuery)}`);
                             }
                           }}
                           role="button"

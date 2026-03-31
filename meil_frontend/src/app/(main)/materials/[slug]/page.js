@@ -1,5 +1,5 @@
 "use client";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { createRequest, fetchProjects, addFavorite, removeFavorite, fetchFavorites } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -9,6 +9,8 @@ export default function MaterialDetailPage() {
   const { slug: rawSlug } = useParams();
   const slug = rawSlug ? decodeURIComponent(rawSlug) : rawSlug;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get("q") || "";
   const { token } = useAuth(); // Move useAuth before useEffect that uses token
   const [selectedItem, setSelectedItem] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -151,7 +153,16 @@ export default function MaterialDetailPage() {
             })
             .filter(item => {
               // Double-check: only include items that match the selected material group
-              return item.mgrp_code === slug;
+              if (item.mgrp_code !== slug) return false;
+              // If a search query was passed from the search page, filter items by it
+              if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                return (
+                  (item.item_desc || "").toLowerCase().includes(q) ||
+                  (item.notes || "").toLowerCase().includes(q)
+                );
+              }
+              return true;
             });
 
           setItems(formattedItems);
@@ -169,7 +180,7 @@ export default function MaterialDetailPage() {
     if (slug) {
       fetchItems();
     }
-  }, [slug]);
+  }, [slug, searchQuery]);
 
   // Fetch item details when item is selected
   useEffect(() => {
@@ -497,6 +508,9 @@ export default function MaterialDetailPage() {
           <div className="flex flex-col min-h-0">
             <h3 className="text-sm font-medium text-gray-700 mb-2">
               Available Items {loadingItems ? "(Loading...)" : `(${items.length})`}
+              {searchQuery && !loadingItems && (
+                <span className="ml-2 text-xs text-blue-600 font-normal">filtered: &quot;{searchQuery}&quot;</span>
+              )}
             </h3>
             <div className="flex-1 overflow-y-auto">
               {loadingItems ? (
