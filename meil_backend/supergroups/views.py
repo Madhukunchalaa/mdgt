@@ -159,3 +159,16 @@ def delete_supergroup(request, sgrp_code):
         return JsonResponse({"message": "SuperGroup deleted successfully"}, status=200)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+@csrf_exempt
+@authenticate
+def restore_supergroup(request, sgrp_code):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+    supergroup = SuperGroup.objects.filter(sgrp_code=sgrp_code, is_deleted=True).first()
+    if not supergroup:
+        return JsonResponse({"error": "Deleted SuperGroup not found"}, status=404)
+    supergroup.is_deleted = False
+    supergroup.save()
+    return JsonResponse({"message": "SuperGroup restored successfully"}, status=200)

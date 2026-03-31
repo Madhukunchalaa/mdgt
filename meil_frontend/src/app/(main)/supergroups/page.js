@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Plus, Edit, Trash2, Search, Users, Info, Loader2, Eye
 } from "lucide-react";
-import { fetchSuperGroups, createSuperGroup, updateSuperGroup, deleteSuperGroup } from "../../../lib/api";
+import { fetchSuperGroups, createSuperGroup, updateSuperGroup, deleteSuperGroup, restoreSuperGroup } from "../../../lib/api";
 import {useAuth} from "@/context/AuthContext";
 import BackButton from "@/components/BackButton";
 import ViewModal from "@/components/ViewModal";
@@ -192,6 +192,18 @@ export default function SupergroupsPage() {
     }
   };
 
+  const handleRestore = async (sgrp_code) => {
+    if (window.confirm("Restore this supergroup?")) {
+      try {
+        setError(null);
+        await restoreSuperGroup(token, sgrp_code);
+        await loadSupergroups();
+      } catch (err) {
+        setError("Failed to restore supergroup: " + (err.response?.data?.error || err.message));
+      }
+    }
+  };
+
   const handleDelete = async (sgrp_code) => {
     if (window.confirm("Are you sure you want to delete this supergroup? This action cannot be undone.")) {
       // Check permission before proceeding
@@ -327,7 +339,15 @@ export default function SupergroupsPage() {
                         <Edit size={14} />
                       </button>
                     )}
-                    {checkPermission("super", "delete") && (
+                    {supergroup.is_deleted ? (
+                      <button
+                        onClick={() => handleRestore(supergroup.sgrp_code)}
+                        className="text-green-600 hover:text-green-800 p-1.5 rounded-full hover:bg-green-50 transition duration-200 text-xs font-medium"
+                        title="Restore"
+                      >
+                        Restore
+                      </button>
+                    ) : checkPermission("super", "delete") && (
                       <button
                         onClick={() => handleDelete(supergroup.sgrp_code)}
                         className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-50 transition duration-200"

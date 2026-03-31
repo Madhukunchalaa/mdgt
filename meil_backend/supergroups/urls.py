@@ -6,4 +6,5 @@ urlpatterns = [
     path('supergroups/list/', views.list_supergroups, name='list_supergroups'),
     path('supergroups/update/<str:sgrp_code>/', views.update_supergroup, name='update_supergroup'),
     path('supergroups/delete/<str:sgrp_code>/', views.delete_supergroup, name='delete_supergroup'),
+    path('supergroups/restore/<str:sgrp_code>/', views.restore_supergroup, name='restore_supergroup'),
 ]

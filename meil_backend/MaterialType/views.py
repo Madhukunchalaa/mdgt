@@ -229,7 +229,7 @@ def update_material_type(request, mat_type_code):
 def delete_material_type(request, mat_type_code):
     if request.method == "DELETE":
         try:
-            material_type = MaterialType.objects.filter(mat_type_code=mat_type_code).first()
+            material_type = MaterialType.objects.filter(mat_type_code=mat_type_code, is_deleted=False).first()
             if not material_type:
                 return JsonResponse({"error": "Material type not found"}, status=404)
 
@@ -239,10 +239,27 @@ def delete_material_type(request, mat_type_code):
                     "error": f"Cannot delete '{mat_type_code}'. It is assigned to {item_count} material(s). Remove them first."
                 }, status=400)
 
-            material_type.delete()
+            material_type.is_deleted = True
+            material_type.save()
             return JsonResponse({"message": f"Material type {mat_type_code} deleted successfully"}, status=200)
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@csrf_exempt
+@authenticate
+def restore_material_type(request, mat_type_code):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        material_type = MaterialType.objects.filter(mat_type_code=mat_type_code, is_deleted=True).first()
+        if not material_type:
+            return JsonResponse({"error": "Deleted material type not found"}, status=404)
+        material_type.is_deleted = False
+        material_type.save()
+        return JsonResponse({"message": f"Material type {mat_type_code} restored successfully"}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

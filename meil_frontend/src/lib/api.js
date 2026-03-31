@@ -94,6 +94,11 @@ export const deleteMaterialGroup = (token, mgrp_code) => {
     return axiosInstance.delete(`matgroups/${mgrp_code}/delete/`).then(res => res.data);
 };
 
+export const restoreMaterialGroup = (token, mgrp_code) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`matgroups/${mgrp_code}/restore/`).then(res => res.data);
+};
+
 // Material Types API
 export const fetchMaterialTypes = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
@@ -114,6 +119,11 @@ export const updateMaterialType = (token, mat_type_code, data) => {
 export const deleteMaterialType = (token, mat_type_code) => {
     const axiosInstance = createAxiosInstance(token);
     return axiosInstance.delete(`materialtype/materialtypes/delete/${mat_type_code}/`).then(res => res.data);
+};
+
+export const restoreMaterialType = (token, mat_type_code) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`materialtype/materialtypes/restore/${mat_type_code}/`).then(res => res.data);
 };
 
 // Projects API
@@ -271,6 +281,11 @@ export const updateSuperGroup = (token, sgrp_code, data) => {
 export const deleteSuperGroup = (token, sgrp_code) => {
     const axiosInstance = createAxiosInstance(token);
     return axiosInstance.delete(`supergroup/supergroups/delete/${sgrp_code}/`).then(res => res.data);
+};
+
+export const restoreSuperGroup = (token, sgrp_code) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`supergroup/supergroups/restore/${sgrp_code}/`).then(res => res.data);
 };
 
 // Validation Lists API

@@ -5,10 +5,11 @@ import {
   Plus, Edit, Trash2, Search, Folder, Info, Loader2, ChevronLeft, ChevronRight, CheckCircle, PlusCircle, FolderOpen, Eye
 } from "lucide-react";
 import { 
-  fetchMaterialGroups, 
-  createMaterialGroup, 
-  updateMaterialGroup, 
+  fetchMaterialGroups,
+  createMaterialGroup,
+  updateMaterialGroup,
   deleteMaterialGroup,
+  restoreMaterialGroup,
   fetchSuperGroups
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
@@ -189,6 +190,18 @@ export default function MaterialGroupsPage() {
     }
   };
 
+  const handleRestore = async (mgrp_code) => {
+    if (window.confirm("Restore this material group?")) {
+      try {
+        setError(null);
+        await restoreMaterialGroup(token, mgrp_code);
+        await loadMaterialGroups();
+      } catch (err) {
+        setError("Failed to restore material group: " + (err.response?.data?.error || err.message));
+      }
+    }
+  };
+
   const handleDelete = async (mgrp_code) => {
     if (window.confirm("Are you sure you want to delete this group? This action cannot be undone.")) {
       try {
@@ -357,7 +370,15 @@ export default function MaterialGroupsPage() {
                     <Edit size={14} />
                   </button>
                 )}
-                {checkPermission("group", "delete") && (
+                {group.is_deleted ? (
+                  <button
+                    onClick={() => handleRestore(group.mgrp_code)}
+                    className="text-green-600 hover:text-green-800 p-1.5 rounded-full hover:bg-green-50 transition duration-200 text-xs font-medium"
+                    title="Restore"
+                  >
+                    Restore
+                  </button>
+                ) : checkPermission("group", "delete") && (
                   <button
                     onClick={() => handleDelete(group.mgrp_code)}
                     className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-100 transition duration-200"

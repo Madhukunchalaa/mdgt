@@ -232,3 +232,16 @@ def delete_matgroup(request, mgrp_code):
         return JsonResponse({"message": "MatGroup deleted successfully"}, status=200)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+@csrf_exempt
+@authenticate
+def restore_matgroup(request, mgrp_code):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+    matgroup = MatGroup.objects.filter(mgrp_code=mgrp_code, is_deleted=True).first()
+    if not matgroup:
+        return JsonResponse({"error": "Deleted MatGroup not found"}, status=404)
+    matgroup.is_deleted = False
+    matgroup.save()
+    return JsonResponse({"message": "MatGroup restored successfully"}, status=200)

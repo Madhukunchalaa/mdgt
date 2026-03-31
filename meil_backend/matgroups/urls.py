@@ -6,4 +6,5 @@ urlpatterns = [
     path('create/', views.create_matgroup, name='create_matgroup'),  # POST create MatGroup
     path('<str:mgrp_code>/update/', views.update_matgroup, name='update_matgroup'),  # PUT update MatGroup
     path('<str:mgrp_code>/delete/', views.delete_matgroup, name='delete_matgroup'),  # DELETE MatGroup
+    path('<str:mgrp_code>/restore/', views.restore_matgroup, name='restore_matgroup'),  # POST restore MatGroup
 ]

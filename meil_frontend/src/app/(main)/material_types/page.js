@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import {
   Plus, Edit, Trash2, Search, Tag, Info, Loader2, Eye
 } from "lucide-react";
-import { 
-  fetchMaterialTypes, 
-  createMaterialType, 
-  updateMaterialType, 
-  deleteMaterialType 
+import {
+  fetchMaterialTypes,
+  createMaterialType,
+  updateMaterialType,
+  deleteMaterialType,
+  restoreMaterialType
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
 import { useSortableData } from "@/hooks/useSortableData";
@@ -160,6 +161,18 @@ export default function MaterialTypesPage() {
     }
   };
 
+  const handleRestore = async (mat_type_code) => {
+    if (window.confirm("Restore this material type?")) {
+      try {
+        setError(null);
+        await restoreMaterialType(token, mat_type_code);
+        await loadMaterialTypes();
+      } catch (err) {
+        setError("Failed to restore material type: " + (err.response?.data?.error || err.message));
+      }
+    }
+  };
+
   const handleDelete = async (mat_type_code) => {
     if (window.confirm("Are you sure you want to delete this type? This action cannot be undone.")) {
       // Check permission before proceeding
@@ -297,7 +310,15 @@ export default function MaterialTypesPage() {
                       <Edit size={14} />
                     </button>
                   )}
-                  {checkPermission("type", "delete") && (
+                  {type.is_deleted ? (
+                    <button
+                      onClick={() => handleRestore(type.mat_type_code)}
+                      className="text-green-600 hover:text-green-800 p-1.5 rounded-full hover:bg-green-50 transition duration-200 text-xs font-medium"
+                      title="Restore"
+                    >
+                      Restore
+                    </button>
+                  ) : checkPermission("type", "delete") && (
                     <button
                       onClick={() => handleDelete(type.mat_type_code)}
                       className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-50 transition duration-200"

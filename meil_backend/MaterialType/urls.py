@@ -6,4 +6,5 @@ urlpatterns = [
     path('materialtypes/create/', views.create_material_type),
     path('materialtypes/update/<str:mat_type_code>/', views.update_material_type),
     path('materialtypes/delete/<str:mat_type_code>/', views.delete_material_type),
+    path('materialtypes/restore/<str:mat_type_code>/', views.restore_material_type),
 ]
