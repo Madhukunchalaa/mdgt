@@ -8,6 +8,8 @@ from django.db import IntegrityError
 from .models import MatGroup
 from supergroups.models import SuperGroup
 from Employee.models import Employee
+from itemmaster.models import ItemMaster
+from matg_attributes.models import MatgAttributeItem
 from Common.Middleware import authenticate, restrict
 
 
@@ -212,6 +214,18 @@ def delete_matgroup(request, mgrp_code):
         matgroup = MatGroup.objects.filter(mgrp_code=mgrp_code, is_deleted=False).first()
         if not matgroup:
             return JsonResponse({"error": "MatGroup not found"}, status=404)
+
+        item_count = ItemMaster.objects.filter(mgrp_code=matgroup, is_deleted=False).count()
+        if item_count > 0:
+            return JsonResponse({
+                "error": f"Cannot delete '{mgrp_code}'. It has {item_count} item(s) assigned. Remove them first."
+            }, status=400)
+
+        attr_count = MatgAttributeItem.objects.filter(mgrp_code=matgroup, is_deleted=False).count()
+        if attr_count > 0:
+            return JsonResponse({
+                "error": f"Cannot delete '{mgrp_code}'. It has {attr_count} attribute(s) assigned. Remove them first."
+            }, status=400)
 
         matgroup.is_deleted = True
         matgroup.save()

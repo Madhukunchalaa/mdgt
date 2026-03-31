@@ -10,6 +10,7 @@ from Common.Middleware import authenticate,restrict  # your middleware
 
 from .models import Project
 from Employee.models import Employee   # assuming Employee has emp_id & role
+from requests.models import Request
 
 
 def is_admin_or_superadmin(user_payload):
@@ -200,6 +201,13 @@ def delete_project(request, pk):
       
 
         project = get_object_or_404(Project, pk=pk)
+
+        request_count = Request.objects.filter(project_code=project).count()
+        if request_count > 0:
+            return JsonResponse({
+                "error": f"Cannot delete '{project.project_code}'. It has {request_count} request(s) assigned. Remove them first."
+            }, status=400)
+
         project.delete()  # hard delete
         return JsonResponse({"message": f"Project '{project.project_code}' deleted successfully"})
 

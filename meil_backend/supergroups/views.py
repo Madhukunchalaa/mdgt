@@ -7,6 +7,7 @@ import json
 from django.db import IntegrityError
 from .models import SuperGroup
 from Employee.models import Employee
+from matgroups.models import MatGroup
 from Common.Middleware import authenticate, restrict
 
 
@@ -146,6 +147,12 @@ def delete_supergroup(request, sgrp_code):
         supergroup = SuperGroup.objects.filter(sgrp_code=sgrp_code, is_deleted=False).first()
         if not supergroup:
             return JsonResponse({"error": "SuperGroup not found"}, status=404)
+
+        assigned_count = MatGroup.objects.filter(sgrp_code=supergroup, is_deleted=False).count()
+        if assigned_count > 0:
+            return JsonResponse({
+                "error": f"Cannot delete '{sgrp_code}'. It has {assigned_count} material group(s) assigned. Remove them first."
+            }, status=400)
 
         supergroup.is_deleted = True
         supergroup.save()

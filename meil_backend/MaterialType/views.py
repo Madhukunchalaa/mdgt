@@ -96,6 +96,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from .models import MaterialType
 from Employee.models import Employee
+from itemmaster.models import ItemMaster
 from Common.Middleware import authenticate, restrict
 
 
@@ -231,6 +232,12 @@ def delete_material_type(request, mat_type_code):
             material_type = MaterialType.objects.filter(mat_type_code=mat_type_code).first()
             if not material_type:
                 return JsonResponse({"error": "Material type not found"}, status=404)
+
+            item_count = ItemMaster.objects.filter(mat_type_code=material_type, is_deleted=False).count()
+            if item_count > 0:
+                return JsonResponse({
+                    "error": f"Cannot delete '{mat_type_code}'. It is assigned to {item_count} material(s). Remove them first."
+                }, status=400)
 
             material_type.delete()
             return JsonResponse({"message": f"Material type {mat_type_code} deleted successfully"}, status=200)
