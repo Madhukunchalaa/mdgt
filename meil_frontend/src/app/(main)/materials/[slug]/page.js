@@ -10,7 +10,7 @@ export default function MaterialDetailPage() {
   const slug = rawSlug ? decodeURIComponent(rawSlug) : rawSlug;
   const router = useRouter();
   const searchParams = useSearchParams();
-  const searchQuery = searchParams.get("q") || "";
+  const urlSearchQuery = searchParams.get("q") || "";
   const { token } = useAuth(); // Move useAuth before useEffect that uses token
   const [selectedItem, setSelectedItem] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -155,8 +155,8 @@ export default function MaterialDetailPage() {
               // Double-check: only include items that match the selected material group
               if (item.mgrp_code !== slug) return false;
               // If a search query was passed from the search page, filter items by it
-              if (searchQuery) {
-                const q = searchQuery.toLowerCase();
+              if (urlSearchQuery) {
+                const q = urlSearchQuery.toLowerCase();
                 return (
                   (item.item_desc || "").toLowerCase().includes(q) ||
                   (item.notes || "").toLowerCase().includes(q)
@@ -180,7 +180,7 @@ export default function MaterialDetailPage() {
     if (slug) {
       fetchItems();
     }
-  }, [slug, searchQuery]);
+  }, [slug, urlSearchQuery]);
 
   // Fetch item details when item is selected
   useEffect(() => {
@@ -508,8 +508,8 @@ export default function MaterialDetailPage() {
           <div className="flex flex-col min-h-0">
             <h3 className="text-sm font-medium text-gray-700 mb-2">
               Available Items {loadingItems ? "(Loading...)" : `(${items.length})`}
-              {searchQuery && !loadingItems && (
-                <span className="ml-2 text-xs text-blue-600 font-normal">filtered: &quot;{searchQuery}&quot;</span>
+              {urlSearchQuery && !loadingItems && (
+                <span className="ml-2 text-xs text-blue-600 font-normal">filtered: &quot;{urlSearchQuery}&quot;</span>
               )}
             </h3>
             <div className="flex-1 overflow-y-auto">
