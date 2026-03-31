@@ -282,7 +282,7 @@ export default function MaterialTypesPage() {
             >
               <td className="px-3 py-2">
                 <div className="flex items-center gap-1.5">
-                  <div className="inline-block px-1.5 py-0.5 bg-purple-100 text-purple-800 font-mono rounded-md shadow-sm text-xs">
+                  <div className="inline-block px-1.5 py-0.5 bg-purple-100 text-purple-800 font-mono rounded-md shadow-sm text-xs uppercase">
                     {type.mat_type_code}
                   </div>
                   {type.is_deleted && <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-1.5 py-0.5 rounded font-semibold">DELETED</span>}

@@ -37,9 +37,9 @@ def search_groups(request):
         models.Q(mgrp_code__icontains=query) |
         models.Q(mgrp_shortname__icontains=query) |
         models.Q(mgrp_longname__icontains=query) |
-        models.Q(items__short_name__icontains=query) |
-        models.Q(items__long_name__icontains=query) |
-        models.Q(items__search_text__icontains=query)
+        models.Q(items__is_deleted=False, items__short_name__icontains=query) |
+        models.Q(items__is_deleted=False, items__long_name__icontains=query) |
+        models.Q(items__is_deleted=False, items__search_text__icontains=query)
     ).distinct()
 
     # Count matching items per group (always reliable, no pg_trgm needed)

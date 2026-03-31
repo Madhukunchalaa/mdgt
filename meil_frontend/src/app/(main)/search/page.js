@@ -29,6 +29,7 @@ export default function MaterialSearchPage() {
   const [freeTextQuery, setFreeTextQuery] = useState("");
   const [freeTextResults, setFreeTextResults] = useState([]);
   const [freeTextLoading, setFreeTextLoading] = useState(false);
+  const [freeTextError, setFreeTextError] = useState(null);
   const [selectedFreeTextGroup, setSelectedFreeTextGroup] = useState("");
 
   // Drill down search states
@@ -163,6 +164,7 @@ export default function MaterialSearchPage() {
   const handleFreeTextSearch = async () => {
     if (!freeTextQuery.trim()) return;
     setFreeTextLoading(true);
+    setFreeTextError(null);
     try {
       const body = { query: freeTextQuery };
       if (searchType) {
@@ -188,10 +190,12 @@ export default function MaterialSearchPage() {
         setFreeTextResults(uniqueResults);
       } else {
         setFreeTextResults([]);
+        setFreeTextError(`Search failed (${res.status}). Please try again.`);
       }
     } catch (err) {
       console.error("Free text search failed:", err);
       setFreeTextResults([]);
+      setFreeTextError("Search failed. Check your connection and try again.");
     } finally {
       setFreeTextLoading(false);
     }
@@ -659,6 +663,7 @@ export default function MaterialSearchPage() {
                         setFreeTextQuery("");
                         setFreeTextResults([]);
                         setSelectedFreeTextGroup("");
+                        setFreeTextError(null);
                       }}
                       className="bg-gray-200 text-gray-700 py-1.5 px-3 text-sm rounded-md shadow hover:bg-gray-300"
                     >
@@ -859,10 +864,14 @@ export default function MaterialSearchPage() {
                       );
                     })
                   ) : (
-                    <div className="p-4 text-center text-gray-500">
-                      {freeTextQuery.trim()
-                        ? "No material groups found. Try a different search term."
-                        : "Enter a search query and click Search."}
+                    <div className="p-4 text-center">
+                      {freeTextError ? (
+                        <span className="text-red-500 text-xs">{freeTextError}</span>
+                      ) : freeTextQuery.trim() ? (
+                        <span className="text-gray-500">No material groups found. Try a different search term.</span>
+                      ) : (
+                        <span className="text-gray-500">Enter a search query and click Search.</span>
+                      )}
                     </div>
                   )}
                 </div>
