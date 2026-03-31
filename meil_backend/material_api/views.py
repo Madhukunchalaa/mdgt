@@ -414,13 +414,11 @@ def item_details_with_attributes(request, item_id):
             item = ItemMaster.objects.filter(
                 local_item_id=item_id_int,
                 is_deleted=False,
-                is_final=True
             ).first()
             if not item:
                 item = ItemMaster.objects.filter(
                     sap_item_id=item_id_int,
                     is_deleted=False,
-                    is_final=True
                 ).first()
         except ValueError:
             return Response({"error": "Invalid item ID format"}, status=status.HTTP_400_BAD_REQUEST)
