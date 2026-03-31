@@ -222,16 +222,15 @@ def delete_matgattribute(request, item_id):
     if not item:
         return JsonResponse({"error": "Attribute item not found"}, status=404)
 
-    # Block deletion if this attribute is used by any items
-    print(f"[DELETE CHECK] Checking attribute: '{item.attribute_name}', mgrp: {item.mgrp_code}")
+    # Block deletion if this attribute is used by items in the same material group
     used_count = ItemMaster.objects.filter(
         is_deleted=False,
+        mgrp_code=item.mgrp_code,
         attributes__has_key=item.attribute_name
     ).count()
-    print(f"[DELETE CHECK] Items using this attribute: {used_count}")
     if used_count > 0:
         return JsonResponse({
-            "error": f"Cannot delete '{item.attribute_name}'. It is assigned to {used_count} item(s). Remove it from all items before deleting."
+            "error": f"Cannot delete '{item.attribute_name}'. It is used by {used_count} item(s) in this material group. Remove it from all items first."
         }, status=400)
 
     item.is_deleted = True
