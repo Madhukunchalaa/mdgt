@@ -241,15 +241,20 @@ def update_request(request, request_id):
                 except ItemMaster.DoesNotExist:
                     return JsonResponse({"error": f"ItemMaster with sap_item_id={sap_item_value} not found"}, status=404)
 
-            # Validate closing rules for MDGT: cannot close without SAP item
+            # Validate closing rules for MDGT based on request type
             requested_status = data.get("status", req_obj.status)
             try:
                 user_role = request.user.get("role") if isinstance(
                     request.user, dict) else None
                 if requested_status == "Closed" and user_role == "MDGT":
-                    sap_item_in_payload = data.get("sap_item")
-                    if not (req_obj.sap_item or sap_item_in_payload):
-                        return JsonResponse({"error": "SAP Item is required to close this request"}, status=400)
+                    req_type = (req_obj.type or "").lower()
+                    if req_type == "material":
+                        sap_item_in_payload = data.get("sap_item")
+                        if not (req_obj.sap_item or sap_item_in_payload):
+                            return JsonResponse({"error": "SAP Item is required to close this request"}, status=400)
+                    elif req_type == "material group":
+                        if not req_obj.material_group:
+                            return JsonResponse({"error": "Material Group is required to close this request"}, status=400)
             except Exception:
                 pass
 

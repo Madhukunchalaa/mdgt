@@ -238,7 +238,7 @@ export default function MaterialsPage() {
   const handleEdit = (material) => {
     setEditingMaterial(material);
     setFormData({
-      sap_item_id: material.sap_item_id || "",
+      sap_item_id: material.sap_item_id != null ? String(material.sap_item_id) : "",
       sap_name: material.sap_name || "",
       mat_type_code: material.mat_type_code || "",
       mgrp_code: material.mgrp_code || "",
@@ -470,8 +470,8 @@ export default function MaterialsPage() {
     }
     
     // Validate SAP Material Number if provided
-    if (formData.sap_item_id?.trim()) {
-      const sapStr = formData.sap_item_id.trim();
+    const sapStr = String(formData.sap_item_id ?? '').trim();
+    if (sapStr) {
       if (!/^\d+$/.test(sapStr)) {
         setError("SAP Material Number must be numeric (digits only)");
         return;
