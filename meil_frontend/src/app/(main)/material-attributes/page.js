@@ -82,6 +82,7 @@ export default function MaterialAttributesPage() {
       console.error("Error loading material attributes:", err);
     } finally {
       setLoading(false);
+    }
   };
 
   const loadMaterialGroups = async () => {
@@ -521,7 +522,6 @@ export default function MaterialAttributesPage() {
         setError(err.response?.data?.error || "Failed to delete material attribute: " + err.message);
         console.error("Error deleting material attribute:", err);
       }
-    }
   };
 
   return (
