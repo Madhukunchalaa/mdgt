@@ -127,6 +127,9 @@ def handle_itemmaster_phase_1(data, request):
             if not short_name:
                 errors.append({"row": idx + 2, "error": "short_name is required"})
                 continue
+            if len(short_name) > 40:
+                errors.append({"row": idx + 2, "error": f"short_name exceeds 40 characters (got {len(short_name)})"})
+                continue
             
             # Convert sap_item_id to int if it's a string
             sap_item_id_value = get_value(row, ["sap_item_id", "Sap Item Id", "sap item id", "SAP_ITEM_ID"])

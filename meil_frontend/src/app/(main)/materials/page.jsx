@@ -1094,11 +1094,15 @@ export default function MaterialsPage() {
                       value={formData.item_desc}
                       onChange={handleInputChange}
                       rows={3}
-                      className="w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      maxLength={40}
+                      className={`w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${(formData.item_desc || "").length >= 40 ? "border-red-400" : ""}`}
                       placeholder="Short name (will be auto-populated with attributes if provided)"
                       readOnly={Object.keys(formData.attributes || {}).length > 0 && Object.values(formData.attributes || {}).some(v => v)}
                       title={Object.keys(formData.attributes || {}).length > 0 && Object.values(formData.attributes || {}).some(v => v) ? "Short name is auto-populated from attributes" : ""}
                     />
+                    <p className={`text-xs mt-0.5 text-right ${(formData.item_desc || "").length >= 40 ? "text-red-500" : "text-gray-400"}`}>
+                      {(formData.item_desc || "").length}/40
+                    </p>
                     {Object.keys(formData.attributes || {}).length > 0 && Object.values(formData.attributes || {}).some(v => v) && (
                       <p className="text-xs text-gray-500 mt-0.5">
                         Short name will be automatically generated from attributes when saved
