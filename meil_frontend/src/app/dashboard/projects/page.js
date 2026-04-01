@@ -51,6 +51,7 @@ export default function ProjectsPage() {
             console.error("Error loading projects:", err);
         } finally {
             setLoading(false);
+        }
     };
 
     // ✅ Add Project
