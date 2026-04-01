@@ -25,9 +25,17 @@ export default function MaterialSearchPage() {
     return "";
   });
 
-  // Free text search states
-  const [freeTextQuery, setFreeTextQuery] = useState("");
-  const [freeTextResults, setFreeTextResults] = useState([]);
+  // Free text search states - persisted in sessionStorage until user clicks Clear
+  const [freeTextQuery, setFreeTextQuery] = useState(() => {
+    if (typeof window !== "undefined") return sessionStorage.getItem("search_freeTextQuery") || "";
+    return "";
+  });
+  const [freeTextResults, setFreeTextResults] = useState(() => {
+    if (typeof window !== "undefined") {
+      try { return JSON.parse(sessionStorage.getItem("search_freeTextResults") || "[]"); } catch { return []; }
+    }
+    return [];
+  });
   const [freeTextLoading, setFreeTextLoading] = useState(false);
   const [selectedFreeTextGroup, setSelectedFreeTextGroup] = useState("");
 
@@ -82,6 +90,8 @@ export default function MaterialSearchPage() {
   // Persist search state to sessionStorage so it survives back-navigation
   useEffect(() => { sessionStorage.setItem("search_searchTab", searchTab); }, [searchTab]);
   useEffect(() => { sessionStorage.setItem("search_searchType", searchType); }, [searchType]);
+  useEffect(() => { sessionStorage.setItem("search_freeTextQuery", freeTextQuery); }, [freeTextQuery]);
+  useEffect(() => { sessionStorage.setItem("search_freeTextResults", JSON.stringify(freeTextResults)); }, [freeTextResults]);
 
   // Load super groups for drill down search
   useEffect(() => {
@@ -659,6 +669,8 @@ export default function MaterialSearchPage() {
                         setFreeTextQuery("");
                         setFreeTextResults([]);
                         setSelectedFreeTextGroup("");
+                        sessionStorage.removeItem("search_freeTextQuery");
+                        sessionStorage.removeItem("search_freeTextResults");
                       }}
                       className="bg-gray-200 text-gray-700 py-1.5 px-3 text-sm rounded-md shadow hover:bg-gray-300"
                     >
