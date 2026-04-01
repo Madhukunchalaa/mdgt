@@ -55,6 +55,7 @@ export default function RequestsPage() {
         const handleRefresh = () => {
             if (token) {
                 loadRequests();
+            }
         };
 
         window.addEventListener("refreshUnreadCount", handleRefresh);
