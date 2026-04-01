@@ -619,9 +619,11 @@ def handle_matgroup_upload(data, request):
 
         sgrp_obj = None
         if sgrp_code_val:
+            # Truncate to max_length=5 to avoid DB validation errors
+            sgrp_key = sgrp_code_val[:5]
             # Auto-create SuperGroup if it doesn't exist yet
             sgrp_obj, _ = SuperGroup.objects.get_or_create(
-                sgrp_code=sgrp_code_val,
+                sgrp_code=sgrp_key,
                 defaults={"sgrp_name": sgrp_code_val, "dept_name": sgrp_code_val[:20]},
             )
 

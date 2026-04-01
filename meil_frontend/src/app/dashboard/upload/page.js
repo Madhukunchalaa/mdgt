@@ -114,7 +114,14 @@ export default function UploadPage() {
                 body: formData,
             });
 
-            const result = await response.json();
+            const text = await response.text();
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch {
+                // Server returned HTML (e.g. 500 error page) instead of JSON
+                throw new Error(`Server error (${response.status}) — check backend logs`);
+            }
             console.log("Result : ", result);
             if (!response.ok) {
                 throw new Error(result.error || "Upload failed");
