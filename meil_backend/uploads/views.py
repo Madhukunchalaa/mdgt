@@ -594,11 +594,18 @@ def handle_matgroup_upload(data, request):
             shortname = get_val(row, ["Mgrp Shortname", "mgrp_shortname"])
             longname = get_val(row, ["Mgrp Longname", "mgrp_longname"])
 
-            # Validate search_type — default to 'Materials' if missing or not a valid choice
-            if raw_search_type and raw_search_type in VALID_SEARCH_TYPES:
-                search_type = raw_search_type
-            else:
-                search_type = "Materials"
+            # Validate search_type — case-insensitive match against allowed DB choices
+            search_type_map = {
+                "service": "service",
+                "materials": "Materials",
+                "spares": "spares"
+            }
+            
+            search_type = "Materials" # default
+            if raw_search_type:
+                clean_type = raw_search_type.strip().lower()
+                if clean_type in search_type_map:
+                    search_type = search_type_map[clean_type]
 
             # Cap field lengths to match model constraints
             if shortname:
