@@ -12,6 +12,7 @@ export default function UploadPage() {
     const fileInputRef = useRef(null);
 
     const templates = ["project", "EmailDomain", "Employee", "MaterialType", "MatgAttributeItem", "Material", "ValidationLists", "SuperGroup", "MatGroup", "ItemMaster", "Company"];
+    const templateLabels = { "MatgAttributeItem": "Material Attribute" };
 
     const triggerToast = (type, message) => {
         window.dispatchEvent(new CustomEvent('showToast', {
@@ -196,7 +197,7 @@ export default function UploadPage() {
                             <option value="">-- Choose a template --</option>
                             {templates.map((tpl) => (
                                 <option key={tpl} value={tpl}>
-                                    {tpl}
+                                    {templateLabels[tpl] ?? tpl}
                                 </option>
                             ))}
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 md:mr-48">

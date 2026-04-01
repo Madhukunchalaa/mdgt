@@ -762,7 +762,7 @@ def bulk_upload(request):
     # -------------------------------------------------------------------
     model_name_lower = model_name.lower()
     
-    if model_name_lower == "itemmaster":
+    if model_name_lower in ("itemmaster", "material"):
         if phase == "1":
             return handle_itemmaster_phase_1(data, request)
         if phase == "2":
@@ -1054,12 +1054,13 @@ def generate_excel_template(request):
         except:
             return JsonResponse({"error": f"Invalid model: {model_name}"}, status=400)
     
-    # For ItemMaster, handle separate downloads
-    if model_name.lower() == "itemmaster":
+    # For ItemMaster or Material, handle separate downloads
+    if model_name.lower() in ("itemmaster", "material"):
+        from itemmaster.models import ItemMaster
         if template_type == "attributes":
             return generate_itemmaster_attributes_template()
         else:
-            return generate_itemmaster_base_template(Model)
+            return generate_itemmaster_base_template(ItemMaster)
     
     # Special handling for MatgAttributeItem - better sample data
     if Model.__name__.lower() == "matgattributeitem":
