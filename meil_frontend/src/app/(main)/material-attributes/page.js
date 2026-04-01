@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
-  Plus, Edit, Trash2, Search, Settings, Loader2, PlusCircle, X, Eye
+  Plus, Edit, Trash2, Search, Settings, Loader2, PlusCircle, X, Eye, Download, Upload
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { fetchMaterialAttributes, createMaterialAttribute, updateMaterialAttribute, deleteMaterialAttribute, fetchMaterialGroups } from "../../../lib/api";
 import {useAuth} from "@/context/AuthContext";
 import SearchableDropdown from "@/components/SearchableDropdown";
@@ -58,7 +59,14 @@ export default function MaterialAttributesPage() {
   const [editValueError, setEditValueError] = useState("");
   
   const {user,token,role,checkPermission} = useAuth();
-  
+
+  // Upload state
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+  const fileInputRef = useRef(null);
+
   // Load data on component mount
   useEffect(() => {
     if (token) {
@@ -507,7 +515,7 @@ export default function MaterialAttributesPage() {
   };
 
   const handleDelete = async (id) => {
-    
+
       // Check permission before proceeding
       if (!checkPermission("attribute", "delete")) {
         setError("You don't have permission to delete material attributes");
@@ -522,6 +530,58 @@ export default function MaterialAttributesPage() {
         setError(err.response?.data?.error || "Failed to delete material attribute: " + err.message);
         console.error("Error deleting material attribute:", err);
       }
+  };
+
+  // Download filtered data as Excel
+  const handleDownloadExcel = () => {
+    const rows = sortedAttributes.map(attr => ({
+      "Material Group": attr.mgrp_code || "",
+      "Attribute Name": attr.attribute_name || "",
+      "Possible Values": Array.isArray(attr.possible_values) ? attr.possible_values.join(", ") : (attr.possible_values || ""),
+      "UOM": Array.isArray(attr.uom) ? attr.uom.join(", ") : (attr.uom || ""),
+      "Priority": attr.print_priority ?? "",
+      "Validation": attr.validation || "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [30, 25, 50, 15, 10, 15].map(w => ({ wch: w }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Attributes");
+    const filename = searchTerm ? `attributes_${searchTerm}.xlsx` : "material_attributes.xlsx";
+    XLSX.writeFile(wb, filename);
+  };
+
+  // Download blank upload template
+  const handleDownloadTemplate = async () => {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/uploads/download-template/?model=MatgAttributeItem`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "MatgAttributeItem_template.xlsx";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  // Upload Excel file to bulk-create attributes
+  const handleUpload = async () => {
+    if (!uploadFile) return;
+    setUploading(true);
+    setUploadResult(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/uploads/bulk-upload/?model=MatgAttributeItem&phase=1`,
+        { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData }
+      );
+      const data = await res.json();
+      setUploadResult(data);
+      if (data.inserted > 0) await loadAttributes();
+    } catch (err) {
+      setUploadResult({ error: err.message });
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -559,6 +619,23 @@ export default function MaterialAttributesPage() {
             >
               <Trash2 size={14} className="mr-1.5" />
               {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+            </button>
+            <button
+              onClick={handleDownloadExcel}
+              disabled={sortedAttributes.length === 0}
+              className="flex items-center px-3 py-1.5 text-sm rounded-lg border border-green-400 text-green-700 bg-green-50 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Download filtered data as Excel"
+            >
+              <Download size={14} className="mr-1.5" />
+              Download
+            </button>
+            <button
+              onClick={() => { setIsUploadModalOpen(true); setUploadResult(null); setUploadFile(null); }}
+              className="flex items-center px-3 py-1.5 text-sm rounded-lg border border-purple-400 text-purple-700 bg-purple-50 hover:bg-purple-100"
+              title="Upload attributes via Excel"
+            >
+              <Upload size={14} className="mr-1.5" />
+              Upload
             </button>
             {checkPermission("attribute", "create") && (
               <button
@@ -1514,6 +1591,77 @@ export default function MaterialAttributesPage() {
           updatedby: "Updated By"
         }}
       />
+
+      {/* Upload Modal */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-base font-semibold text-gray-800">Upload Attributes (Excel)</h2>
+              <button onClick={() => setIsUploadModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+            </div>
+            <div className="p-4 space-y-3">
+              {/* Template download */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-blue-800">Step 1: Download Template</p>
+                  <p className="text-xs text-blue-600">Fill in the template and upload it below</p>
+                </div>
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="flex items-center px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Download size={12} className="mr-1" />
+                  Template
+                </button>
+              </div>
+
+              {/* File input */}
+              <div>
+                <p className="text-xs font-medium text-gray-700 mb-1">Step 2: Select Excel File</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => { setUploadFile(e.target.files[0]); setUploadResult(null); }}
+                  className="w-full text-xs border border-gray-300 rounded-lg p-2 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700"
+                />
+              </div>
+
+              {/* Result */}
+              {uploadResult && (
+                <div className={`rounded-lg p-3 text-xs ${uploadResult.error ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'}`}>
+                  {uploadResult.error ? (
+                    <p>{uploadResult.error}</p>
+                  ) : (
+                    <>
+                      <p className="font-medium">Inserted: {uploadResult.inserted} rows</p>
+                      {uploadResult.errors?.length > 0 && (
+                        <div className="mt-1 max-h-24 overflow-y-auto">
+                          {uploadResult.errors.map((e, i) => (
+                            <p key={i} className="text-red-600">Row {e.row}: {e.error}</p>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button onClick={() => setIsUploadModalOpen(false)} className="px-3 py-1.5 text-sm border rounded-lg text-gray-700 hover:bg-gray-50">Close</button>
+              <button
+                onClick={handleUpload}
+                disabled={!uploadFile || uploading}
+                className="flex items-center px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                {uploading && <Loader2 size={13} className="animate-spin mr-1.5" />}
+                {uploading ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
