@@ -122,12 +122,9 @@ def handle_itemmaster_phase_1(data, request):
                 errors.append({"row": idx + 2, "error": "mgrp_code is required"})
                 continue
             
-            # Get short_name (handle different header formats)
+            # Get short_name (optional, max 40 chars)
             short_name = get_value(row, ["short_name", "Short Name", "short name", "SHORT_NAME"]) or ""
-            if not short_name:
-                errors.append({"row": idx + 2, "error": "short_name is required"})
-                continue
-            if len(short_name) > 40:
+            if short_name and len(short_name) > 40:
                 errors.append({"row": idx + 2, "error": f"short_name exceeds 40 characters (got {len(short_name)})"})
                 continue
             
