@@ -72,7 +72,6 @@ export default function IndentPage() {
     };
 
     const removeItem = async (request_id) => {
-        
             try {
                 setError(null);
                 //  const token = localStorage.getItem("token");
@@ -81,7 +80,6 @@ export default function IndentPage() {
             } catch (err) {
                 setError("Failed to delete request: " + (err.response?.data?.error || err.message));
             }
-        }
     };
 
     const submitIndent = () => {

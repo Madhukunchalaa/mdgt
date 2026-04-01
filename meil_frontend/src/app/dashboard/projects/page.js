@@ -132,7 +132,6 @@ export default function ProjectsPage() {
 
     // ✅ Delete Project with confirmation
     const handleDelete = async (id, name) => {
-        
             // Check permission before proceeding
             if (!checkPermission("project", "delete")) {
                 setError("You don't have permission to delete projects");
@@ -152,7 +151,6 @@ export default function ProjectsPage() {
                 setError("Failed to delete project: " + (err.message || "Unknown error"));
                 console.error("Error deleting project:", err);
             }
-        }
     };
 
     // ✅ Open Edit Modal

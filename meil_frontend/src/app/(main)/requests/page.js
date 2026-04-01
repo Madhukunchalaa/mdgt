@@ -305,7 +305,6 @@ export default function RequestsPage() {
     };
 
     const handleDelete = async (request_id) => {
-        
             // Check permission before proceeding
             if (!checkPermission("request", "delete")) {
                 setError("You don't have permission to delete requests");
@@ -325,7 +324,6 @@ export default function RequestsPage() {
                 setError("Failed to delete request: " + (err.response?.data?.error || err.message));
                 console.error("Error deleting request:", err);
             }
-        }
     };
 
     const getStatusColor = (status) => {
