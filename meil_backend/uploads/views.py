@@ -485,7 +485,8 @@ def handle_matgattribute_phase_1(data, request):
     from matg_attributes.models import MatgAttributeItem
     from matgroups.models import MatGroup
 
-    objs = []
+    inserted = 0
+    updated = 0
     errors = []
 
     # Helper function to get value by multiple possible keys (handles different header formats)
@@ -508,13 +509,13 @@ def handle_matgattribute_phase_1(data, request):
             else:
                 errors.append({"row": idx, "error": "mgrp_code is required"})
                 continue
-            
+
             # Get attribute_name (handle different header formats)
             attribute_name = get_value(row, ["attribute_name", "Attribute Name", "attribute name", "ATTRIBUTE_NAME"])
             if not attribute_name:
                 errors.append({"row": idx, "error": "attribute_name is required"})
                 continue
-            
+
             # Get possible_values (handle different header formats)
             possible_values_str = get_value(row, ["possible_values", "Possible Values", "possible values", "POSSIBLE_VALUES"])
             possible_vals = []
@@ -523,11 +524,11 @@ def handle_matgattribute_phase_1(data, request):
                     x.strip() for x in possible_values_str.split(",")
                     if x.strip()
                 ]
-            
+
             # Get uom (handle different header formats)
             uom_str = get_value(row, ["uom", "Uom", "UOM", "Unit Of Measure"])
             uom = uom_str if uom_str else None
-            
+
             # Get print_priority (handle different header formats)
             print_priority_str = get_value(row, ["print_priority", "Print Priority", "print priority", "PRINT_PRIORITY"])
             print_priority = None
@@ -536,35 +537,34 @@ def handle_matgattribute_phase_1(data, request):
                     print_priority = int(float(print_priority_str))
                 except (ValueError, TypeError):
                     print_priority = None
-            
+
             # Get validation (handle different header formats)
             validation = get_value(row, ["validation", "Validation", "VALIDATION"])
-            
-            objs.append(MatgAttributeItem(
+
+            # update_or_create so edited rows are reflected in DB
+            _, created = MatgAttributeItem.objects.update_or_create(
                 mgrp_code=mgrp_code,
                 attribute_name=attribute_name,
-                possible_values=possible_vals,
-                uom=uom,
-                print_priority=print_priority,
-                validation=validation,
-            ))
+                defaults={
+                    "possible_values": possible_vals,
+                    "uom": uom,
+                    "print_priority": print_priority,
+                    "validation": validation,
+                    "is_deleted": False,
+                }
+            )
+            if created:
+                inserted += 1
+            else:
+                updated += 1
 
         except Exception as e:
-            import traceback
             errors.append({"row": idx, "error": f"{str(e)}"})
-
-    if objs:
-        try:
-            MatgAttributeItem.objects.bulk_create(objs, ignore_conflicts=True)
-        except Exception as e:
-            return JsonResponse({
-                "error": f"Bulk create failed: {str(e)}",
-                "errors": errors
-            }, status=400)
 
     return JsonResponse({
         "message": "MatGroup Attribute Definitions imported",
-        "inserted": len(objs),
+        "inserted": inserted,
+        "updated": updated,
         "errors": errors,
     })
 

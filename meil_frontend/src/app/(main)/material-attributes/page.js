@@ -532,18 +532,18 @@ export default function MaterialAttributesPage() {
       }
   };
 
-  // Download filtered data as Excel
+  // Download filtered data as Excel (headers match upload format so edited file can be re-uploaded)
   const handleDownloadExcel = () => {
     const rows = sortedAttributes.map(attr => ({
-      "Material Group": attr.mgrp_code || "",
-      "Attribute Name": attr.attribute_name || "",
-      "Possible Values": Array.isArray(attr.possible_values) ? attr.possible_values.join(", ") : (attr.possible_values || ""),
-      "UOM": Array.isArray(attr.uom) ? attr.uom.join(", ") : (attr.uom || ""),
-      "Priority": attr.print_priority ?? "",
-      "Validation": attr.validation || "",
+      "mgrp_code": attr.mgrp_code || "",
+      "attribute_name": attr.attribute_name || "",
+      "possible_values": Array.isArray(attr.possible_values) ? attr.possible_values.join(", ") : (attr.possible_values || ""),
+      "uom": Array.isArray(attr.uom) ? attr.uom.join(", ") : (attr.uom || ""),
+      "print_priority": attr.print_priority ?? "",
+      "validation": attr.validation || "",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [30, 25, 50, 15, 10, 15].map(w => ({ wch: w }));
+    ws["!cols"] = [20, 25, 50, 15, 15, 15].map(w => ({ wch: w }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Attributes");
     const filename = searchTerm ? `attributes_${searchTerm}.xlsx` : "material_attributes.xlsx";
@@ -578,7 +578,7 @@ export default function MaterialAttributesPage() {
       );
       const data = await res.json();
       setUploadResult(data);
-      if (data.inserted > 0) await loadAttributes();
+      if ((data.inserted > 0) || (data.updated > 0)) await loadAttributes();
     } catch (err) {
       setUploadResult({ error: err.message });
     } finally {
@@ -1637,7 +1637,7 @@ export default function MaterialAttributesPage() {
                     <p>{uploadResult.error}</p>
                   ) : (
                     <>
-                      <p className="font-medium">Inserted: {uploadResult.inserted} rows</p>
+                      <p className="font-medium">Inserted: {uploadResult.inserted} new &nbsp;|&nbsp; Updated: {uploadResult.updated ?? 0} existing</p>
                       {uploadResult.errors?.length > 0 && (
                         <div className="mt-1 max-h-24 overflow-y-auto">
                           {uploadResult.errors.map((e, i) => (
