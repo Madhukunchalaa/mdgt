@@ -603,8 +603,7 @@ def handle_matgroup_upload(data, request):
         if sgrp_code_val:
             sgrp_obj = SuperGroup.objects.filter(sgrp_code=sgrp_code_val).first()
             if not sgrp_obj:
-                errors.append({"row": idx, "error": f"SuperGroup '{sgrp_code_val}' not found"})
-                continue
+                errors.append({"row": idx, "error": f"SuperGroup '{sgrp_code_val}' not found — sgrp_code set to null"})
 
         objs.append(MatGroup(
             mgrp_code=mgrp_code,

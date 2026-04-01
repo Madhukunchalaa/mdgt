@@ -121,7 +121,13 @@ export default function UploadPage() {
             }
 
             setUploadProgress(100);
-            triggerToast("success", result.message || `${file.name} uploaded successfully!`);
+            if (result.errors && result.errors.length > 0) {
+                const errSummary = result.errors.slice(0, 3).map(e => `Row ${e.row}: ${e.error}`).join("; ");
+                const more = result.errors.length > 3 ? ` ...+${result.errors.length - 3} more` : "";
+                triggerToast("error", `Inserted ${result.inserted ?? 0}, ${result.errors.length} error(s): ${errSummary}${more}`);
+            } else {
+                triggerToast("success", result.message || `${file.name} uploaded successfully! Inserted: ${result.inserted ?? 0}`);
+            }
         } catch (error) {
             console.error("Upload error:", error);
             triggerToast("error", error.message);
