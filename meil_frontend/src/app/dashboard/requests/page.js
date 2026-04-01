@@ -55,7 +55,6 @@ export default function RequestsPage() {
         const handleRefresh = () => {
             if (token) {
                 loadRequests();
-            }
         };
 
         window.addEventListener("refreshUnreadCount", handleRefresh);
@@ -309,7 +308,7 @@ export default function RequestsPage() {
     };
 
     const handleDelete = async (request_id) => {
-        if (window.confirm("Are you sure you want to delete this request? This action cannot be undone.")) {
+        
             // Check permission before proceeding
             if (!checkPermission("request", "delete")) {
                 setError("You don't have permission to delete requests");

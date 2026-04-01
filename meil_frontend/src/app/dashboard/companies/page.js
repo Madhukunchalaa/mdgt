@@ -54,7 +54,6 @@ export default function CompaniesPage() {
       console.error("Error loading companies:", err);
     } finally {
       setLoading(false);
-    }
   };
 
   // Filter companies
@@ -136,7 +135,7 @@ export default function CompaniesPage() {
   };
 
   const handleDelete = async (company_name) => {
-    if (window.confirm("Are you sure you want to delete this company? This action cannot be undone.")) {
+    
       try {
         setError(null);
         const token = localStorage.getItem("token");

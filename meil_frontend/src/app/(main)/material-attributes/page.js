@@ -82,7 +82,6 @@ export default function MaterialAttributesPage() {
       console.error("Error loading material attributes:", err);
     } finally {
       setLoading(false);
-    }
   };
 
   const loadMaterialGroups = async () => {
@@ -507,7 +506,7 @@ export default function MaterialAttributesPage() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this material attribute? This action cannot be undone.")) {
+    
       // Check permission before proceeding
       if (!checkPermission("attribute", "delete")) {
         setError("You don't have permission to delete material attributes");

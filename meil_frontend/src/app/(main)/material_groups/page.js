@@ -191,33 +191,31 @@ export default function MaterialGroupsPage() {
   };
 
   const handleRestore = async (mgrp_code) => {
-    if (window.confirm("Restore this material group?")) {
-      try {
-        setError(null);
-        await restoreMaterialGroup(token, mgrp_code);
-        await loadMaterialGroups();
-      } catch (err) {
-        setError("Failed to restore material group: " + (err.response?.data?.error || err.message));
-      }
+    try {
+      setError(null);
+      await restoreMaterialGroup(token, mgrp_code);
+      await loadMaterialGroups();
+    } catch (err) {
+      setError("Failed to restore material group: " + (err.response?.data?.error || err.message));
     }
   };
 
   const handleDelete = async (mgrp_code) => {
-    if (window.confirm("Are you sure you want to delete this group? This action cannot be undone.")) {
-      try {
-        if (!token) {
-          setError("No authentication token found");
-          return;
-        }
-
-        await deleteMaterialGroup(token, mgrp_code);
-        await loadMaterialGroups();
-      } catch (err) {
-        setError("Failed to delete material group: " + (err.response?.data?.error || err.message || "Unknown error"));
-        console.error("Error deleting material group:", err);
-      }
+    if (!checkPermission("group", "delete")) {
+      setError("You don't have permission to delete material groups");
+      return;
+    }
+    try {
+      setError(null);
+      await deleteMaterialGroup(token, mgrp_code);
+      await loadMaterialGroups();
+    } catch (err) {
+      setError("Failed to delete material group: " + (err.response?.data?.error || err.message));
+      console.error("Error deleting material group:", err);
     }
   };
+
+
 
 
 
@@ -291,7 +289,7 @@ export default function MaterialGroupsPage() {
     {/* Table Header */}
     <thead>
       <tr className="bg-gradient-to-r from-purple-600 via-pink-500 to-red-500 text-white uppercase tracking-wide">
-        <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('mgrp_code')}>Code{getSortIcon('mgrp_code')}</th>
+        <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('mgrp_code')}>Material Group{getSortIcon('mgrp_code')}</th>
         <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('mgrp_shortname')}>Short Name{getSortIcon('mgrp_shortname')}</th>
         <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('mgrp_longname')}>Long Name{getSortIcon('mgrp_longname')}</th>
         <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('sgrp_code')}>Super Group{getSortIcon('sgrp_code')}</th>

@@ -139,26 +139,17 @@ export default function ProjectsPage() {
 
     // ✅ Delete Project with confirmation
     const handleDelete = async (id, name) => {
-        if (window.confirm(`Are you sure you want to delete project "${name}"?`)) {
-            // Check permission before proceeding
-            if (!checkPermission("project", "delete")) {
-                setError("You don't have permission to delete projects");
-                return;
-            }
-            
-            try {
-                //  const token = localStorage.getItem("token");
-                if (!token) {
-                    setError("No authentication token found");
-                    return;
-                }
-
-                await deleteProject(token, id);
-                await loadProjects();
-            } catch (err) {
-                setError("Failed to delete project: " + (err.message || "Unknown error"));
-                console.error("Error deleting project:", err);
-            }
+        if (!checkPermission("project", "delete")) {
+            setError("You don't have permission to delete projects");
+            return;
+        }
+        try {
+            if (!token) { setError("No authentication token found"); return; }
+            await deleteProject(token, id);
+            await loadProjects();
+        } catch (err) {
+            setError("Failed to delete project: " + (err.message || "Unknown error"));
+            console.error("Error deleting project:", err);
         }
     };
 

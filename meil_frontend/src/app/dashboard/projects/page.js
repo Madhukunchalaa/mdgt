@@ -51,7 +51,6 @@ export default function ProjectsPage() {
             console.error("Error loading projects:", err);
         } finally {
             setLoading(false);
-        }
     };
 
     // ✅ Add Project
@@ -132,7 +131,7 @@ export default function ProjectsPage() {
 
     // ✅ Delete Project with confirmation
     const handleDelete = async (id, name) => {
-        if (window.confirm(`Are you sure you want to delete project "${name}"?`)) {
+        
             // Check permission before proceeding
             if (!checkPermission("project", "delete")) {
                 setError("You don't have permission to delete projects");

@@ -79,10 +79,6 @@ export default function FavoritesPage() {
 
   const handleRemoveFavorite = async (favoriteId, localItemId, sapItemId) => {
     if (!token) return;
-    if (!window.confirm("Are you sure you want to remove this material from favorites?")) {
-      return;
-    }
-
     try {
       setRemovingId(favoriteId);
       const itemData = localItemId

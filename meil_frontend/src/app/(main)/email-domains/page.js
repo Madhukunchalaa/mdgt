@@ -49,7 +49,6 @@ export default function EmailDomainsPage() {
       console.error("Error loading email domains:", err);
     } finally {
       setLoading(false);
-    }
   };
 
   // Filter domains
@@ -156,7 +155,7 @@ export default function EmailDomainsPage() {
   };
 
   const handleDelete = async (emaildomain_id) => {
-    if (window.confirm("Are you sure you want to delete this email domain? This action cannot be undone.")) {
+    
       // Check permission before proceeding
       if (!checkPermission("email", "delete")) {
         setError("You don't have permission to delete email domains");

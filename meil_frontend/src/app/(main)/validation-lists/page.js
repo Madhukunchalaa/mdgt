@@ -63,7 +63,6 @@ export default function ValidationListsPage() {
       console.error("Error loading validation lists:", err);
     } finally {
       setLoading(false);
-    }
   };
 
   // Filter validation lists
@@ -173,7 +172,7 @@ export default function ValidationListsPage() {
   };
 
   const handleDelete = async (list_id) => {
-    if (window.confirm("Are you sure you want to delete this validation list? This action cannot be undone.")) {
+    
       // Check permission before proceeding
       if (!checkPermission("validation", "delete")) {
         setError("You don't have permission to delete validation lists");

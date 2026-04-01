@@ -40,7 +40,6 @@ export default function IndentPage() {
             setError("Failed to load requests: " + (err.response?.data?.error || err.message));
         } finally {
             setLoading(false);
-        }
     };
 
     const addItem = async () => {
@@ -72,7 +71,7 @@ export default function IndentPage() {
     };
 
     const removeItem = async (request_id) => {
-        if (window.confirm("Are you sure you want to delete this request?")) {
+        
             try {
                 setError(null);
                 //  const token = localStorage.getItem("token");

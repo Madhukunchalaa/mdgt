@@ -630,21 +630,16 @@ export default function MaterialsPage() {
   };
 
   const handleDelete = async (local_item_id) => {
-    if (window.confirm("Are you sure you want to delete this material?")) {
-      // Check permission before proceeding
-        if (!checkPermission("item", "delete")) {
-        setError("You don't have permission to delete materials");
-        return;
-      }
-      
-      try {
-        setError(null);
-        //  const token = localStorage.getItem("token");
-        await deleteItemMaster(token, local_item_id);
-        await loadMaterials();
-      } catch (err) {
-        setError("Failed to delete material: " + (err.response?.data?.error || err.message));
-      }
+    if (!checkPermission("item", "delete")) {
+      setError("You don't have permission to delete materials");
+      return;
+    }
+    try {
+      setError(null);
+      await deleteItemMaster(token, local_item_id);
+      await loadMaterials();
+    } catch (err) {
+      setError("Failed to delete material: " + (err.response?.data?.error || err.message));
     }
   };
 

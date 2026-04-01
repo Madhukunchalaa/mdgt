@@ -48,7 +48,6 @@ export default function EmailDomainsPage() {
       console.error("Error loading email domains:", err);
     } finally {
       setLoading(false);
-    }
   };
 
   // Filter domains
@@ -126,7 +125,7 @@ export default function EmailDomainsPage() {
   };
 
   const handleDelete = async (emaildomain_id) => {
-    if (window.confirm("Are you sure you want to delete this email domain? This action cannot be undone.")) {
+    
       try {
         //  const token = localStorage.getItem("token");
         if (!token) {

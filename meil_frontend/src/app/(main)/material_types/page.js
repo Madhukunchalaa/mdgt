@@ -162,38 +162,27 @@ export default function MaterialTypesPage() {
   };
 
   const handleRestore = async (mat_type_code) => {
-    if (window.confirm("Restore this material type?")) {
-      try {
-        setError(null);
-        await restoreMaterialType(token, mat_type_code);
-        await loadMaterialTypes();
-      } catch (err) {
-        setError("Failed to restore material type: " + (err.response?.data?.error || err.message));
-      }
+    try {
+      setError(null);
+      await restoreMaterialType(token, mat_type_code);
+      await loadMaterialTypes();
+    } catch (err) {
+      setError("Failed to restore material type: " + (err.response?.data?.error || err.message));
     }
   };
 
   const handleDelete = async (mat_type_code) => {
-    if (window.confirm("Are you sure you want to delete this type? This action cannot be undone.")) {
-      // Check permission before proceeding
-      if (!checkPermission("type", "delete")) {
-        setError("You don't have permission to delete material types");
-        return;
-      }
-      
-      try {
-        //  const token = localStorage.getItem("token");
-        if (!token) {
-          setError("No authentication token found");
-          return;
-        }
-
-        await deleteMaterialType(token, mat_type_code);
-        await loadMaterialTypes();
-      } catch (err) {
-        setError("Failed to delete material type: " + (err.message || "Unknown error"));
-        console.error("Error deleting material type:", err);
-      }
+    if (!checkPermission("type", "delete")) {
+      setError("You don't have permission to delete material types");
+      return;
+    }
+    try {
+      if (!token) { setError("No authentication token found"); return; }
+      await deleteMaterialType(token, mat_type_code);
+      await loadMaterialTypes();
+    } catch (err) {
+      setError("Failed to delete material type: " + (err.message || "Unknown error"));
+      console.error("Error deleting material type:", err);
     }
   };
 

@@ -193,34 +193,27 @@ export default function SupergroupsPage() {
   };
 
   const handleRestore = async (sgrp_code) => {
-    if (window.confirm("Restore this supergroup?")) {
-      try {
-        setError(null);
-        await restoreSuperGroup(token, sgrp_code);
-        await loadSupergroups();
-      } catch (err) {
-        setError("Failed to restore supergroup: " + (err.response?.data?.error || err.message));
-      }
+    try {
+      setError(null);
+      await restoreSuperGroup(token, sgrp_code);
+      await loadSupergroups();
+    } catch (err) {
+      setError("Failed to restore supergroup: " + (err.response?.data?.error || err.message));
     }
   };
 
   const handleDelete = async (sgrp_code) => {
-    if (window.confirm("Are you sure you want to delete this supergroup? This action cannot be undone.")) {
-      // Check permission before proceeding
-      if (!checkPermission("super", "delete")) {
-        setError("You don't have permission to delete supergroups");
-        return;
-      }
-      
-      try {
-        setError(null);
-        // const token = localStorage.getItem("token");
-        await deleteSuperGroup(token, sgrp_code);
-        await loadSupergroups();
-      } catch (err) {
-        setError("Failed to delete supergroup: " + (err.response?.data?.error || err.message));
-        console.error("Error deleting supergroup:", err);
-      }
+    if (!checkPermission("super", "delete")) {
+      setError("You don't have permission to delete supergroups");
+      return;
+    }
+    try {
+      setError(null);
+      await deleteSuperGroup(token, sgrp_code);
+      await loadSupergroups();
+    } catch (err) {
+      setError("Failed to delete supergroup: " + (err.response?.data?.error || err.message));
+      console.error("Error deleting supergroup:", err);
     }
   };
 
