@@ -567,6 +567,67 @@ def handle_matgattribute_phase_1(data, request):
 
 
 # -------------------------------------------------------------------
+# -------------------------------------------------------------------
+# MatGroup Upload Handler
+# -------------------------------------------------------------------
+def handle_matgroup_upload(data, request):
+    from matgroups.models import MatGroup
+    from supergroups.models import SuperGroup
+
+    now = timezone.now()
+    objs = []
+    errors = []
+
+    def get_val(row, keys):
+        for k in keys:
+            if k in row and str(row[k]).strip():
+                return str(row[k]).strip()
+        return None
+
+    for idx, row in enumerate(data, start=2):
+        mgrp_code = get_val(row, ["Mgrp Code", "mgrp_code", "MGRP_CODE"])
+        sgrp_code_val = get_val(row, ["Sgrp Code", "sgrp_code", "SGRP_CODE"])
+        search_type = get_val(row, ["Search Type", "search_type"]) or "Materials"
+        shortname = get_val(row, ["Mgrp Shortname", "mgrp_shortname"])
+        longname = get_val(row, ["Mgrp Longname", "mgrp_longname"])
+
+        if not mgrp_code:
+            errors.append({"row": idx, "error": "Mgrp Code is required"})
+            continue
+
+        if MatGroup.objects.filter(mgrp_code=mgrp_code).exists():
+            errors.append({"row": idx, "error": f"MatGroup '{mgrp_code}' already exists"})
+            continue
+
+        sgrp_obj = None
+        if sgrp_code_val:
+            sgrp_obj = SuperGroup.objects.filter(sgrp_code=sgrp_code_val).first()
+            if not sgrp_obj:
+                errors.append({"row": idx, "error": f"SuperGroup '{sgrp_code_val}' not found"})
+                continue
+
+        objs.append(MatGroup(
+            mgrp_code=mgrp_code,
+            sgrp_code=sgrp_obj,
+            search_type=search_type,
+            mgrp_shortname=shortname,
+            mgrp_longname=longname,
+            notes="",
+            uom_values=[],
+            created=now,
+            updated=now,
+        ))
+
+    if objs:
+        MatGroup.objects.bulk_create(objs, ignore_conflicts=True)
+
+    return JsonResponse({
+        "message": "MatGroup upload complete",
+        "inserted": len(objs),
+        "errors": errors,
+    })
+
+
 # MAIN BULK UPLOAD FUNCTION WITH PHASE ROUTING
 # -------------------------------------------------------------------
 @csrf_exempt
@@ -665,6 +726,9 @@ def bulk_upload(request):
         if phase == "1":
             return handle_matgattribute_phase_1(data, request)
         return JsonResponse({"error": f"Invalid phase '{phase}' for MatgAttributeItem"}, status=400)
+
+    if model_name_lower == "matgroup":
+        return handle_matgroup_upload(data, request)
 
     # Generic handler for all other models
     return handle_generic_model_upload(data, request, Model, model_name)
@@ -885,6 +949,42 @@ def generate_itemmaster_attributes_template():
 
 
 # -------------------------------------------------------------------
+# Generate MatGroup Template (excludes attribgrpid, uom_values, notes)
+# -------------------------------------------------------------------
+def generate_matgroup_template():
+    """Generate upload template for MatGroup with only required fields."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "MatGroup"
+
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+
+    headers = ["Mgrp Code", "Sgrp Code", "Search Type", "Mgrp Shortname", "Mgrp Longname"]
+    for col_idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 25
+
+    sample_rows = [
+        ["SAFTYAPRN", "SAFTY", "Materials", "Sample Mgrp Shortname 1", "Sample Mgrp Longname 1"],
+        ["SAFTYHGVL", "SAFTY", "Materials", "Sample Mgrp Shortname 2", "Sample Mgrp Longname 2"],
+    ]
+    for row_idx, row in enumerate(sample_rows, start=2):
+        for col_idx, val in enumerate(row, start=1):
+            ws.cell(row=row_idx, column=col_idx, value=val)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="MatGroup_template.xlsx"'
+    wb.save(response)
+    return response
+
+
+# -------------------------------------------------------------------
 # Generate Excel Template Dynamically
 # -------------------------------------------------------------------
 @csrf_exempt
@@ -917,6 +1017,10 @@ def generate_excel_template(request):
     # Special handling for MatgAttributeItem - better sample data
     if Model.__name__.lower() == "matgattributeitem":
         return generate_matgattribute_template(Model)
+
+    # Special handling for MatGroup - exclude attribgrpid, uom_values, notes
+    if Model.__name__.lower() == "matgroup":
+        return generate_matgroup_template()
     
     # Fields to exclude (audit fields)
     exclude_fields = {'id', 'created', 'updated', 'createdby', 'updatedby', 'is_deleted', 

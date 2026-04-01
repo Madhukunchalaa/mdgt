@@ -26,18 +26,9 @@ export default function MaterialSearchPage() {
   });
 
   // Free text search states
-  const [freeTextQuery, setFreeTextQuery] = useState(() => {
-    if (typeof window !== "undefined") return sessionStorage.getItem("search_freeTextQuery") || "";
-    return "";
-  });
-  const [freeTextResults, setFreeTextResults] = useState(() => {
-    if (typeof window !== "undefined") {
-      try { return JSON.parse(sessionStorage.getItem("search_freeTextResults") || "[]"); } catch { return []; }
-    }
-    return [];
-  });
+  const [freeTextQuery, setFreeTextQuery] = useState("");
+  const [freeTextResults, setFreeTextResults] = useState([]);
   const [freeTextLoading, setFreeTextLoading] = useState(false);
-  const [freeTextError, setFreeTextError] = useState(null);
   const [selectedFreeTextGroup, setSelectedFreeTextGroup] = useState("");
 
   // Drill down search states
@@ -91,8 +82,6 @@ export default function MaterialSearchPage() {
   // Persist search state to sessionStorage so it survives back-navigation
   useEffect(() => { sessionStorage.setItem("search_searchTab", searchTab); }, [searchTab]);
   useEffect(() => { sessionStorage.setItem("search_searchType", searchType); }, [searchType]);
-  useEffect(() => { sessionStorage.setItem("search_freeTextQuery", freeTextQuery); }, [freeTextQuery]);
-  useEffect(() => { sessionStorage.setItem("search_freeTextResults", JSON.stringify(freeTextResults)); }, [freeTextResults]);
 
   // Load super groups for drill down search
   useEffect(() => {
@@ -174,7 +163,6 @@ export default function MaterialSearchPage() {
   const handleFreeTextSearch = async () => {
     if (!freeTextQuery.trim()) return;
     setFreeTextLoading(true);
-    setFreeTextError(null);
     try {
       const body = { query: freeTextQuery };
       if (searchType) {
@@ -200,12 +188,10 @@ export default function MaterialSearchPage() {
         setFreeTextResults(uniqueResults);
       } else {
         setFreeTextResults([]);
-        setFreeTextError(`Search failed (${res.status}). Please try again.`);
       }
     } catch (err) {
       console.error("Free text search failed:", err);
       setFreeTextResults([]);
-      setFreeTextError("Search failed. Check your connection and try again.");
     } finally {
       setFreeTextLoading(false);
     }
@@ -673,9 +659,6 @@ export default function MaterialSearchPage() {
                         setFreeTextQuery("");
                         setFreeTextResults([]);
                         setSelectedFreeTextGroup("");
-                        setFreeTextError(null);
-                        sessionStorage.removeItem("search_freeTextQuery");
-                        sessionStorage.removeItem("search_freeTextResults");
                       }}
                       className="bg-gray-200 text-gray-700 py-1.5 px-3 text-sm rounded-md shadow hover:bg-gray-300"
                     >
@@ -838,11 +821,11 @@ export default function MaterialSearchPage() {
                       return (
                         <div
                           key={code}
-                          onClick={() => router.push(`/materials/${code}?q=${encodeURIComponent(freeTextQuery)}`)}
+                          onClick={() => router.push(`/materials/${code}`)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
-                              router.push(`/materials/${code}?q=${encodeURIComponent(freeTextQuery)}`);
+                              router.push(`/materials/${code}`);
                             }
                           }}
                           role="button"
@@ -858,7 +841,7 @@ export default function MaterialSearchPage() {
                               )}
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <div className="text-xs text-white px-1.5 py-0.5 font-mono rounded-md" style={{backgroundColor: '#2f3190'}}>
+                              <div className="text-xs bg-green-400 text-white px-1.5 py-0.5 font-mono rounded-md">
                                 Hits: {rank}
                               </div>
                               <button
@@ -876,14 +859,10 @@ export default function MaterialSearchPage() {
                       );
                     })
                   ) : (
-                    <div className="p-4 text-center">
-                      {freeTextError ? (
-                        <span className="text-red-500 text-xs">{freeTextError}</span>
-                      ) : freeTextQuery.trim() ? (
-                        <span className="text-gray-500">No material groups found. Try a different search term.</span>
-                      ) : (
-                        <span className="text-gray-500">Enter a search query and click Search.</span>
-                      )}
+                    <div className="p-4 text-center text-gray-500">
+                      {freeTextQuery.trim()
+                        ? "No material groups found. Try a different search term."
+                        : "Enter a search query and click Search."}
                     </div>
                   )}
                 </div>
