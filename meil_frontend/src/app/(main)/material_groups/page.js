@@ -49,17 +49,13 @@ export default function MaterialGroupsPage() {
   const [formData, setFormData] = useState(formDataDefaults);
   const [uomInput, setUomInput] = useState("");
 
-  // Load data on component mount
+  // Load data on component mount and when showDeleted changes
   useEffect(() => {
     if (token) {
       loadMaterialGroups();
       loadSuperGroups();
     }
-  }, [token]);
-
-  useEffect(() => {
-    if (token) loadMaterialGroups();
-  }, [showDeleted]);
+  }, [token, showDeleted]);
 
   const loadMaterialGroups = async () => {
     if (!token) {

@@ -62,14 +62,10 @@ export default function SupergroupsPage() {
     },
   ];
 
-  // Load data on component mount
-  useEffect(() => {
-    loadSupergroups();
-  }, [token]);
-
+  // Load data on component mount and when showDeleted changes
   useEffect(() => {
     if (token) loadSupergroups();
-  }, [showDeleted]);
+  }, [token, showDeleted]);
 
   const loadSupergroups = async () => {
     try {

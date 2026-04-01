@@ -33,14 +33,10 @@ export default function MaterialTypesPage() {
     mat_type_desc: "",
   });
   const {user,token,role,checkPermission} = useAuth();
-  // Load data on component mount
-  useEffect(() => {
-    loadMaterialTypes();
-  }, [token]);
-
+  // Load data on component mount and when showDeleted changes
   useEffect(() => {
     if (token) loadMaterialTypes();
-  }, [showDeleted]);
+  }, [token, showDeleted]);
 
   const loadMaterialTypes = async () => {
     try {
