@@ -570,8 +570,10 @@ export default function MaterialAttributesPage() {
     try {
       const formData = new FormData();
       formData.append("file", uploadFile);
+      formData.append("model", "MatgAttributeItem");
+      formData.append("phase", "1");
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/uploads/bulk-upload/?model=MatgAttributeItem&phase=1`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/uploads/bulk-upload/`,
         { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData }
       );
       const data = await res.json();
