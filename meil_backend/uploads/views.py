@@ -604,7 +604,10 @@ def handle_matgroup_upload(data, request):
             # Soft-deleted record — restore it with the uploaded data
             sgrp_obj = None
             if sgrp_code_val:
-                sgrp_obj = SuperGroup.objects.filter(sgrp_code=sgrp_code_val).first()
+                sgrp_obj, _ = SuperGroup.objects.get_or_create(
+                    sgrp_code=sgrp_code_val,
+                    defaults={"sgrp_name": sgrp_code_val, "dept_name": sgrp_code_val[:20]},
+                )
             existing.sgrp_code = sgrp_obj
             existing.search_type = search_type
             existing.mgrp_shortname = shortname
@@ -616,9 +619,11 @@ def handle_matgroup_upload(data, request):
 
         sgrp_obj = None
         if sgrp_code_val:
-            # Include soft-deleted supergroups so the FK can still be linked
-            sgrp_obj = SuperGroup.objects.filter(sgrp_code=sgrp_code_val).first()
-            # If not found, silently leave sgrp_code as null (no error shown to user)
+            # Auto-create SuperGroup if it doesn't exist yet
+            sgrp_obj, _ = SuperGroup.objects.get_or_create(
+                sgrp_code=sgrp_code_val,
+                defaults={"sgrp_name": sgrp_code_val, "dept_name": sgrp_code_val[:20]},
+            )
 
         objs.append(MatGroup(
             mgrp_code=mgrp_code,
