@@ -841,7 +841,7 @@ export default function MaterialSearchPage() {
                               )}
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <div className="text-xs bg-green-400 text-white px-1.5 py-0.5 font-mono rounded-md">
+                              <div className="text-xs text-white px-1.5 py-0.5 font-mono rounded-md" style={{backgroundColor: '#44469B'}}>
                                 Hits: {rank}
                               </div>
                               <button

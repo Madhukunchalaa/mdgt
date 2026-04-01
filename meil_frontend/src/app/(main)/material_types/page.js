@@ -168,10 +168,7 @@ export default function MaterialTypesPage() {
   };
 
   const handleDelete = async (mat_type_code) => {
-    if (!checkPermission("type", "delete")) {
-      setError("You don't have permission to delete material types");
-      return;
-    }
+    if (!window.confirm(`Are you sure you want to delete material type "${mat_type_code}"?`)) return;
     try {
       if (!token) { setError("No authentication token found"); return; }
       await deleteMaterialType(token, mat_type_code);
@@ -303,7 +300,7 @@ export default function MaterialTypesPage() {
                     >
                       Restore
                     </button>
-                  ) : checkPermission("type", "delete") && (
+                  ) : (
                     <button
                       onClick={() => handleDelete(type.mat_type_code)}
                       className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-50 transition duration-200"
