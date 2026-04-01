@@ -329,7 +329,6 @@ export default function RequestsPage() {
                 setError("Failed to delete request: " + (err.response?.data?.error || err.message));
                 console.error("Error deleting request:", err);
             }
-        }
     };
 
     const getStatusColor = (status) => {
