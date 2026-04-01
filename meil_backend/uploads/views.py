@@ -616,9 +616,9 @@ def handle_matgroup_upload(data, request):
 
         sgrp_obj = None
         if sgrp_code_val:
+            # Include soft-deleted supergroups so the FK can still be linked
             sgrp_obj = SuperGroup.objects.filter(sgrp_code=sgrp_code_val).first()
-            if not sgrp_obj:
-                errors.append({"row": idx, "error": f"SuperGroup '{sgrp_code_val}' not found — sgrp_code set to null"})
+            # If not found, silently leave sgrp_code as null (no error shown to user)
 
         objs.append(MatGroup(
             mgrp_code=mgrp_code,
