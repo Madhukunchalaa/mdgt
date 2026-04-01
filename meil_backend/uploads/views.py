@@ -595,8 +595,23 @@ def handle_matgroup_upload(data, request):
             errors.append({"row": idx, "error": "Mgrp Code is required"})
             continue
 
-        if MatGroup.objects.filter(mgrp_code=mgrp_code).exists():
-            errors.append({"row": idx, "error": f"MatGroup '{mgrp_code}' already exists"})
+        existing = MatGroup.objects.filter(mgrp_code=mgrp_code).first()
+        if existing:
+            if not existing.is_deleted:
+                # Truly active duplicate — skip with error
+                errors.append({"row": idx, "error": f"MatGroup '{mgrp_code}' already exists"})
+                continue
+            # Soft-deleted record — restore it with the uploaded data
+            sgrp_obj = None
+            if sgrp_code_val:
+                sgrp_obj = SuperGroup.objects.filter(sgrp_code=sgrp_code_val).first()
+            existing.sgrp_code = sgrp_obj
+            existing.search_type = search_type
+            existing.mgrp_shortname = shortname
+            existing.mgrp_longname = longname
+            existing.is_deleted = False
+            existing.updated = now
+            existing.save()
             continue
 
         sgrp_obj = None
