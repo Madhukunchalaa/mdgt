@@ -212,13 +212,12 @@ export default function MaterialGroupsPage() {
   };
 
   const handleDownload = () => {
-    const headers = ["Mgrp Code", "Mgrp Shortname", "Mgrp Longname", "Sgrp Code", "Search Type", "Notes", "Created"];
+    const headers = ["Mgrp Code", "Mgrp Shortname", "Mgrp Longname", "Sgrp Code", "Notes", "Created"];
     const rows = sortedGroups.map(g => [
       g.mgrp_code || "",
       g.mgrp_shortname || "",
       g.mgrp_longname || "",
       g.supergroup || g.sgrp_code || "",
-      g.search_type || "",
       g.notes || "",
       g.created || "",
     ]);
@@ -320,7 +319,6 @@ export default function MaterialGroupsPage() {
         <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('mgrp_shortname')}>Short Name{getSortIcon('mgrp_shortname')}</th>
         <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('mgrp_longname')}>Long Name{getSortIcon('mgrp_longname')}</th>
         <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('sgrp_code')}>Super Group{getSortIcon('sgrp_code')}</th>
-        <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('search_type')}>Search Type{getSortIcon('search_type')}</th>
         <th className="px-3 py-2 text-left text-xs font-semibold cursor-pointer select-none" onClick={() => requestSort('created')}>Created{getSortIcon('created')}</th>
         <th className="px-3 py-2 text-left text-xs font-semibold">Actions</th>
       </tr>
@@ -358,21 +356,6 @@ export default function MaterialGroupsPage() {
               <div className="text-xs text-gray-900">
                 {group.supergroup || <span className="text-gray-400 italic">N/A</span>}
               </div>
-            </td>
-            <td className="px-3 py-2">
-              <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                  group.search_type === "service"
-                    ? "bg-blue-100 text-blue-800"
-                    : group.search_type === "Materials"
-                    ? "bg-green-100 text-green-800"
-                    : group.search_type === "spares"
-                    ? "bg-purple-100 text-purple-800"
-                    : "bg-gray-200 text-gray-800"
-                }`}
-              >
-                {group.search_type || "Materials"}
-              </span>
             </td>
             <td className="px-3 py-2">
               <div className="text-xs text-gray-500">{group.created}</div>
