@@ -574,6 +574,8 @@ def handle_matgroup_upload(data, request):
     from matgroups.models import MatGroup
     from supergroups.models import SuperGroup
 
+    VALID_SEARCH_TYPES = {"service", "Materials", "spares"}
+
     now = timezone.now()
     objs = []
     errors = []
@@ -585,60 +587,76 @@ def handle_matgroup_upload(data, request):
         return None
 
     for idx, row in enumerate(data, start=2):
-        mgrp_code = get_val(row, ["Mgrp Code", "mgrp_code", "MGRP_CODE"])
-        sgrp_code_val = get_val(row, ["Sgrp Code", "sgrp_code", "SGRP_CODE"])
-        search_type = get_val(row, ["Search Type", "search_type"]) or "Materials"
-        shortname = get_val(row, ["Mgrp Shortname", "mgrp_shortname"])
-        longname = get_val(row, ["Mgrp Longname", "mgrp_longname"])
+        try:
+            mgrp_code = get_val(row, ["Mgrp Code", "mgrp_code", "MGRP_CODE"])
+            sgrp_code_val = get_val(row, ["Sgrp Code", "sgrp_code", "SGRP_CODE"])
+            raw_search_type = get_val(row, ["Search Type", "search_type"])
+            shortname = get_val(row, ["Mgrp Shortname", "mgrp_shortname"])
+            longname = get_val(row, ["Mgrp Longname", "mgrp_longname"])
 
-        if not mgrp_code:
-            errors.append({"row": idx, "error": "Mgrp Code is required"})
-            continue
+            # Validate search_type — default to 'Materials' if missing or not a valid choice
+            if raw_search_type and raw_search_type in VALID_SEARCH_TYPES:
+                search_type = raw_search_type
+            else:
+                search_type = "Materials"
 
-        existing = MatGroup.objects.filter(mgrp_code=mgrp_code).first()
-        if existing:
-            if not existing.is_deleted:
-                # Truly active duplicate — skip with error
-                errors.append({"row": idx, "error": f"MatGroup '{mgrp_code}' already exists"})
+            # Cap field lengths to match model constraints
+            if shortname:
+                shortname = shortname[:150]
+            if longname:
+                longname = longname[:150]
+
+            if not mgrp_code:
+                errors.append({"row": idx, "error": "Mgrp Code is required"})
                 continue
-            # Soft-deleted record — restore it with the uploaded data
+
+            existing = MatGroup.objects.filter(mgrp_code=mgrp_code).first()
+            if existing:
+                if not existing.is_deleted:
+                    # Truly active duplicate — skip with error
+                    errors.append({"row": idx, "error": f"MatGroup '{mgrp_code}' already exists"})
+                    continue
+                # Soft-deleted record — restore it with the uploaded data
+                sgrp_obj = None
+                if sgrp_code_val:
+                    sgrp_key = sgrp_code_val[:5]
+                    sgrp_obj, _ = SuperGroup.objects.get_or_create(
+                        sgrp_code=sgrp_key,
+                        defaults={"sgrp_name": sgrp_code_val, "dept_name": sgrp_code_val[:20]},
+                    )
+                existing.sgrp_code = sgrp_obj
+                existing.search_type = search_type
+                existing.mgrp_shortname = shortname
+                existing.mgrp_longname = longname
+                existing.is_deleted = False
+                existing.updated = now
+                existing.save()
+                continue
+
             sgrp_obj = None
             if sgrp_code_val:
+                # Truncate to max_length=5 to avoid DB validation errors
                 sgrp_key = sgrp_code_val[:5]
+                # Auto-create SuperGroup if it doesn't exist yet
                 sgrp_obj, _ = SuperGroup.objects.get_or_create(
                     sgrp_code=sgrp_key,
                     defaults={"sgrp_name": sgrp_code_val, "dept_name": sgrp_code_val[:20]},
                 )
-            existing.sgrp_code = sgrp_obj
-            existing.search_type = search_type
-            existing.mgrp_shortname = shortname
-            existing.mgrp_longname = longname
-            existing.is_deleted = False
-            existing.updated = now
-            existing.save()
-            continue
 
-        sgrp_obj = None
-        if sgrp_code_val:
-            # Truncate to max_length=5 to avoid DB validation errors
-            sgrp_key = sgrp_code_val[:5]
-            # Auto-create SuperGroup if it doesn't exist yet
-            sgrp_obj, _ = SuperGroup.objects.get_or_create(
-                sgrp_code=sgrp_key,
-                defaults={"sgrp_name": sgrp_code_val, "dept_name": sgrp_code_val[:20]},
-            )
+            objs.append(MatGroup(
+                mgrp_code=mgrp_code,
+                sgrp_code=sgrp_obj,
+                search_type=search_type,
+                mgrp_shortname=shortname,
+                mgrp_longname=longname,
+                notes="",
+                uom_values=[],
+                created=now,
+                updated=now,
+            ))
 
-        objs.append(MatGroup(
-            mgrp_code=mgrp_code,
-            sgrp_code=sgrp_obj,
-            search_type=search_type,
-            mgrp_shortname=shortname,
-            mgrp_longname=longname,
-            notes="",
-            uom_values=[],
-            created=now,
-            updated=now,
-        ))
+        except Exception as e:
+            errors.append({"row": idx, "error": f"Unexpected error: {str(e)}"})
 
     if objs:
         MatGroup.objects.bulk_create(objs, ignore_conflicts=True)
