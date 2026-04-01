@@ -40,6 +40,7 @@ export default function IndentPage() {
             setError("Failed to load requests: " + (err.response?.data?.error || err.message));
         } finally {
             setLoading(false);
+        }
     };
 
     const addItem = async () => {
