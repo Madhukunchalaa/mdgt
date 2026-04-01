@@ -141,11 +141,20 @@ def handle_itemmaster_phase_1(data, request):
                     sap_item_id = None
             
             # Get other optional fields
-            long_name = get_value(row, ["long_name", "Long Name", "long name", "LONG_NAME"])
+            long_name    = get_value(row, ["long_name", "Long Name", "long name", "LONG_NAME"])
             mgrp_long_name = get_value(row, ["mgrp_long_name", "Mgrp Long Name", "mgrp long name", "MGRP_LONG_NAME"])
-            sap_name = get_value(row, ["sap_name", "Sap Name", "sap name", "SAP_NAME"])
-            search_text = get_value(row, ["search_text", "Search Text", "search text", "SEARCH_TEXT"])
-            
+            sap_name     = get_value(row, ["sap_name", "Sap Name", "sap name", "SAP_NAME"])
+            search_text  = get_value(row, ["search_text", "Search Text", "search text", "SEARCH_TEXT"])
+
+            # New specification fields
+            item_type   = get_value(row, ["item_type", "Type", "TYPE"])
+            item_number = get_value(row, ["item_number", "Number", "NUMBER"])
+            moc         = get_value(row, ["moc", "Moc", "MOC"])
+            item_size   = get_value(row, ["item_size", "Size", "SIZE"])
+            part_number = get_value(row, ["part_number", "Part Number", "part number", "PART_NUMBER", "PART NUMBER"])
+            model       = get_value(row, ["model", "Model", "MODEL"])
+            make        = get_value(row, ["make", "Make", "MAKE"])
+
             objs.append(ItemMaster(
                 sap_item_id=sap_item_id,
                 mat_type_code=mat_type_code,
@@ -155,6 +164,13 @@ def handle_itemmaster_phase_1(data, request):
                 mgrp_long_name=mgrp_long_name,
                 sap_name=sap_name,
                 search_text=search_text,
+                item_type=item_type,
+                item_number=item_number,
+                moc=moc,
+                item_size=item_size,
+                part_number=part_number,
+                model=model,
+                make=make,
                 created=now,
                 updated=now,
             ))
@@ -799,63 +815,68 @@ def get_model_fields(request):
 # Generate ItemMaster Base Values Template
 # -------------------------------------------------------------------
 def generate_itemmaster_base_template(Model):
-    """Generate template for ItemMaster base values (excluding attributes and is_final)"""
+    """Generate template for ItemMaster base values with fixed column order and friendly headers."""
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Item Base Values"
-    
-    # Fields to exclude
-    exclude_fields = {'id', 'created', 'updated', 'createdby', 'updatedby', 'is_deleted', 
-                     'createdby_id', 'updatedby_id', 'local_item_id', 'attributes', 'is_final'}
-    
-    # Get data entry fields
-    data_entry_fields = []
-    for field in Model._meta.concrete_fields:
-        if field.name not in exclude_fields and not field.many_to_many:
-            data_entry_fields.append(field)
-    
-    # Header styling
+    ws.title = "Material Upload"
+
+    # Fixed column definitions: (header label, field_key, width)
+    columns = [
+        ("SAP Item ID",     "sap_item_id",    15),
+        ("Mat Type Code",   "mat_type_code",  15),
+        ("Mgrp Code",       "mgrp_code",      15),
+        ("Short Name",      "short_name",     25),
+        ("Long Name",       "long_name",      35),
+        ("Mgrp Long Name",  "mgrp_long_name", 30),
+        ("SAP Name",        "sap_name",       25),
+        ("Search Text",     "search_text",    30),
+        ("Type",            "item_type",      15),
+        ("Number",          "item_number",    15),
+        ("MOC",             "moc",            15),
+        ("Size",            "item_size",      15),
+        ("Part Number",     "part_number",    18),
+        ("Model",           "model",          15),
+        ("Make",            "make",           15),
+    ]
+
     header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
     header_font = Font(bold=True, color="FFFFFF", size=11)
-    
-    # Create headers
-    headers = []
-    for field in data_entry_fields:
-        if hasattr(field, 'db_column') and field.db_column:
-            field_display = field.db_column.replace('_', ' ').title()
-        else:
-            field_display = field.name.replace('_', ' ').title()
-        headers.append(field_display)
-    
-    # Write headers
-    for col_idx, header in enumerate(headers, start=1):
+
+    for col_idx, (header, _, width) in enumerate(columns, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center", vertical="center")
-    
-    # Set column widths
-    for col_idx in range(1, len(headers) + 1):
-        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 25
-    
-    # Add sample data rows
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
+
+    # Sample rows
     sample_data = [
-        {"sap_item_id": "12345", "mat_type_code": "MAT1", "mgrp_code": "GRP001", "short_name": "Sample Item 1", "long_name": "Sample Long Name 1", "mgrp_long_name": "Material Group Long Name", "sap_name": "SAP Item Name 1", "search_text": "sample search text 1"},
-        {"sap_item_id": "12346", "mat_type_code": "MAT2", "mgrp_code": "GRP002", "short_name": "Sample Item 2", "long_name": "Sample Long Name 2", "mgrp_long_name": "Material Group Long Name 2", "sap_name": "SAP Item Name 2", "search_text": "sample search text 2"},
+        {
+            "sap_item_id": "12345", "mat_type_code": "ROH", "mgrp_code": "MPFITLATR",
+            "short_name": "SS LATROLET 3/4\"", "long_name": "Stainless Steel Latrolet 3/4 inch",
+            "mgrp_long_name": "Pipe Fittings Latrolet", "sap_name": "SS LATROLET 3/4\"",
+            "search_text": "latrolet pipe fitting ss",
+            "item_type": "Fitting", "item_number": "LT-001", "moc": "SS316",
+            "item_size": "3/4\"", "part_number": "PRT-LT-001", "model": "LT-STD", "make": "Swagelok",
+        },
+        {
+            "sap_item_id": "12346", "mat_type_code": "ROH", "mgrp_code": "MPFITNIPH",
+            "short_name": "CS NIPPLE HEX 1\"", "long_name": "Carbon Steel Hex Nipple 1 inch",
+            "mgrp_long_name": "Pipe Fittings Nipple Hex", "sap_name": "CS NIPPLE HEX 1\"",
+            "search_text": "nipple hex pipe fitting cs",
+            "item_type": "Fitting", "item_number": "NH-002", "moc": "CS",
+            "item_size": "1\"", "part_number": "PRT-NH-002", "model": "NH-STD", "make": "Parker",
+        },
     ]
-    
+
     for row_idx, sample_row in enumerate(sample_data, start=2):
-        for col_idx, field in enumerate(data_entry_fields, start=1):
-            field_name = field.db_column if hasattr(field, 'db_column') and field.db_column else field.name
-            value = sample_row.get(field_name, "")
-            ws.cell(row=row_idx, column=col_idx, value=value)
-    
-    # Create HTTP response
+        for col_idx, (_, field_key, _) in enumerate(columns, start=1):
+            ws.cell(row=row_idx, column=col_idx, value=sample_row.get(field_key, ""))
+
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    filename = "ItemMaster_Base_Values_template.xlsx"
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Content-Disposition'] = 'attachment; filename="Material_Upload_Template.xlsx"'
     wb.save(response)
     return response
 

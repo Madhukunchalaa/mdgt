@@ -79,6 +79,17 @@ class ItemMaster(models.Model):
     search_text = models.CharField(max_length=300, blank=True, null=True)
     uom = models.CharField(max_length=50, blank=True, null=True, help_text="Unit of Measure")
 
+    # -----------------------------
+    # 🆕 MATERIAL SPECIFICATION FIELDS
+    # -----------------------------
+    item_type   = models.CharField(max_length=100, blank=True, null=True, help_text="Type of material")
+    item_number = models.CharField(max_length=100, blank=True, null=True, help_text="Item number")
+    moc         = models.CharField(max_length=100, blank=True, null=True, help_text="Material of Construction")
+    item_size   = models.CharField(max_length=100, blank=True, null=True, help_text="Size")
+    part_number = models.CharField(max_length=100, blank=True, null=True, help_text="Part number")
+    model       = models.CharField(max_length=100, blank=True, null=True, help_text="Model")
+    make        = models.CharField(max_length=100, blank=True, null=True, help_text="Make / Manufacturer")
+
     attributes = models.JSONField(
         default=dict,
         help_text="Stores selected attribute values for this material, based on MatGroup's attribute definitions"
