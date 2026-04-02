@@ -129,18 +129,18 @@ def handle_itemmaster_phase_1(data, request):
                 continue
             
             # Convert sap_item_id to int if it's a string
-            sap_item_id_value = get_value(row, ["sap_item_id", "Sap Item Id", "sap item id", "SAP_ITEM_ID"])
+            sap_item_id_value = get_value(row, ["sap_item_id", "Sap Item Id", "SAP Item Id", "SAP Item ID", "sap item id", "SAP_ITEM_ID"])
             sap_item_id = None
             if sap_item_id_value:
                 try:
                     sap_item_id = int(float(sap_item_id_value))
                 except (ValueError, TypeError):
                     sap_item_id = None
-            
+
             # Get other optional fields
             long_name    = get_value(row, ["long_name", "Long Name", "long name", "LONG_NAME"])
             mgrp_long_name = get_value(row, ["mgrp_long_name", "Mgrp Long Name", "mgrp long name", "MGRP_LONG_NAME"])
-            sap_name     = get_value(row, ["sap_name", "Sap Name", "sap name", "SAP_NAME"])
+            sap_name     = get_value(row, ["sap_name", "Sap Name", "SAP Name", "sap name", "SAP_NAME"])
             search_text  = get_value(row, ["search_text", "Search Text", "search text", "SEARCH_TEXT"])
 
             # New specification fields
@@ -256,7 +256,7 @@ def handle_itemmaster_phase_2(data, request):
     for idx, row in enumerate(data, start=2):  # start=2 because row 1 is header
         try:
             # Get sap_item_id (handle different header formats)
-            sap_item_id_value = get_value(row, ["sap_item_id", "Sap Item Id", "sap item id", "SAP_ITEM_ID"])
+            sap_item_id_value = get_value(row, ["sap_item_id", "Sap Item Id", "SAP Item Id", "SAP Item ID", "sap item id", "SAP_ITEM_ID"])
             if not sap_item_id_value:
                 errors.append({"row": idx, "error": "sap_item_id is required"})
                 continue
