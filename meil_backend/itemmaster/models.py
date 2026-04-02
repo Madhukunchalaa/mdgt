@@ -67,7 +67,7 @@ class ItemMaster(models.Model):
     # -----------------------------
     # 🔄 RENAMED FIELDS
     # -----------------------------
-    short_name = models.CharField(max_length=40, blank=True, null=True)
+    short_name = models.CharField(max_length=100)
     long_name = models.CharField(max_length=250, blank=True, null=True)
 
     # -----------------------------

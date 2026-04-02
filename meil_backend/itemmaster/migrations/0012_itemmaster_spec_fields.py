@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('itemmaster', '0011_alter_itemmaster_short_name_max_length'),
+        ('itemmaster', '0010_alter_itemmaster_sap_item_id'),
     ]
 
     operations = [
