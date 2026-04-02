@@ -238,6 +238,7 @@ def validate_attribute_value(value, validation_type):
 # -------------------------------------------------------------------
 def handle_itemmaster_phase_2(data, request):
     from itemmaster.models import ItemMaster
+    from itemmaster.views import format_short_name
     from matg_attributes.models import MatgAttributeItem
     import json
 
@@ -347,8 +348,11 @@ def handle_itemmaster_phase_2(data, request):
             else:
                 unchanged += 1
 
-            # Update item attributes
+            # Update item attributes and rebuild short_name
             item.attributes = attributes
+            rebuilt = format_short_name(item.sap_name, attributes)
+            if rebuilt and len(rebuilt) >= 3:
+                item.short_name = rebuilt[:40]
             item.save()
 
         except Exception as e:
