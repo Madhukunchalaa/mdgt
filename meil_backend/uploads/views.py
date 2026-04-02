@@ -152,6 +152,18 @@ def handle_itemmaster_phase_1(data, request):
             model       = get_value(row, ["model", "Model", "MODEL"])
             make        = get_value(row, ["make", "Make", "MAKE"])
 
+            # Build attributes JSON by matching spec fields to MatgAttributeItem names (case-insensitive)
+            spec_map = {
+                "type": item_type, "number": item_number, "moc": moc,
+                "size": item_size, "part number": part_number, "model": model, "make": make,
+            }
+            attributes = {}
+            from matg_attributes.models import MatgAttributeItem
+            for attr in MatgAttributeItem.objects.filter(mgrp_code=mgrp_code, is_deleted=False):
+                val = spec_map.get(attr.attribute_name.lower().strip())
+                if val:
+                    attributes[attr.attribute_name] = val
+
             # Auto-generate short_name from sap_name + spec fields if not provided
             if not short_name:
                 parts = [p for p in [sap_name, item_type, item_number, moc, item_size, part_number, model, make] if p]
@@ -166,6 +178,7 @@ def handle_itemmaster_phase_1(data, request):
                 mgrp_long_name=mgrp_long_name,
                 sap_name=sap_name,
                 search_text=search_text,
+                attributes=attributes,
                 item_type=item_type,
                 item_number=item_number,
                 moc=moc,
