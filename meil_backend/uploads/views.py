@@ -169,8 +169,7 @@ def handle_itemmaster_phase_1(data, request):
                 parts = [p for p in [sap_name, item_type, item_number, moc, item_size, part_number, model, make] if p]
                 short_name = ", ".join(parts)[:40]
 
-            objs.append(ItemMaster(
-                sap_item_id=sap_item_id,
+            fields = dict(
                 mat_type_code=mat_type_code,
                 mgrp_code=mgrp_code,
                 short_name=short_name,
@@ -186,15 +185,28 @@ def handle_itemmaster_phase_1(data, request):
                 part_number=part_number,
                 model=model,
                 make=make,
-                created=now,
                 updated=now,
-            ))
+            )
+
+            # Update existing record if sap_item_id matches, else create new
+            if sap_item_id:
+                existing = ItemMaster.objects.filter(sap_item_id=sap_item_id).first()
+                if existing:
+                    for k, v in fields.items():
+                        setattr(existing, k, v)
+                    existing.save()
+                    objs.append(existing)
+                    continue
+
+            objs.append(ItemMaster(sap_item_id=sap_item_id, created=now, **fields))
+
         except Exception as e:
             import traceback
             errors.append({"row": idx + 2, "error": f"{str(e)}"})
 
-    if objs:
-        ItemMaster.objects.bulk_create(objs, ignore_conflicts=True)
+    new_objs = [o for o in objs if not o.pk]
+    if new_objs:
+        ItemMaster.objects.bulk_create(new_objs, ignore_conflicts=True)
 
     return JsonResponse({
         "message": "ItemMaster Phase 1 upload complete",
