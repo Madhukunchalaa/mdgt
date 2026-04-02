@@ -152,6 +152,11 @@ def handle_itemmaster_phase_1(data, request):
             model       = get_value(row, ["model", "Model", "MODEL"])
             make        = get_value(row, ["make", "Make", "MAKE"])
 
+            # Auto-generate short_name from sap_name + spec fields if not provided
+            if not short_name:
+                parts = [p for p in [sap_name, item_type, item_number, moc, item_size, part_number, model, make] if p]
+                short_name = ", ".join(parts)[:40]
+
             objs.append(ItemMaster(
                 sap_item_id=sap_item_id,
                 mat_type_code=mat_type_code,
