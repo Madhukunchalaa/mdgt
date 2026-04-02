@@ -79,6 +79,14 @@ class ItemMaster(models.Model):
     search_text = models.CharField(max_length=300, blank=True, null=True)
     uom = models.CharField(max_length=50, blank=True, null=True, help_text="Unit of Measure")
 
+    item_type   = models.CharField(max_length=100, blank=True, null=True)
+    item_number = models.CharField(max_length=100, blank=True, null=True)
+    moc         = models.CharField(max_length=100, blank=True, null=True)
+    item_size   = models.CharField(max_length=100, blank=True, null=True)
+    part_number = models.CharField(max_length=100, blank=True, null=True)
+    model       = models.CharField(max_length=100, blank=True, null=True)
+    make        = models.CharField(max_length=100, blank=True, null=True)
+
     # -----------------------------
     # 🆕 MATERIAL SPECIFICATION FIELDS
     # -----------------------------
