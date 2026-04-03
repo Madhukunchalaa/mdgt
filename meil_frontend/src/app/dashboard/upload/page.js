@@ -12,7 +12,7 @@ export default function UploadPage() {
     const fileInputRef = useRef(null);
 
     const templates = ["project", "EmailDomain", "Employee", "MaterialType", "MatgAttributeItem", "Material", "ValidationLists", "SuperGroup", "MatGroup", "ItemMaster", "Company"];
-    const templateLabels = { "MatgAttributeItem": "MatGroupItem" };
+    const templateLabels = { "MatgAttributeItem": "Material Group Attributes and Values", "ItemMaster": "Upload template for Material, Material Group and Attributes" };
 
     const triggerToast = (type, message) => {
         window.dispatchEvent(new CustomEvent('showToast', {
@@ -291,7 +291,7 @@ export default function UploadPage() {
                                                 onChange={(e) => setSelectedPhase(e.target.value)}
                                                 className="mr-2"
                                             />
-                                            <span className="text-sm text-gray-700">Phase 1: Base Values</span>
+                                            <span className="text-sm text-gray-700">Phase 1: SAP Material assignment material group</span>
                                         </label>
                                         <label className="flex items-center">
                                             <input
@@ -302,11 +302,11 @@ export default function UploadPage() {
                                                 onChange={(e) => setSelectedPhase(e.target.value)}
                                                 className="mr-2"
                                             />
-                                            <span className="text-sm text-gray-700">Phase 2: Attributes</span>
+                                            <span className="text-sm text-gray-700">Phase 2: Attribute values to material</span>
                                         </label>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-2">
-                                        Phase 1: Upload base item information. Phase 2: Upload attribute settings.
+                                        Phase 1: SAP Material assignment to material group. Phase 2: Attribute values to material.
                                     </p>
                                 </div>
                             )}
