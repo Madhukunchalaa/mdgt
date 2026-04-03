@@ -284,6 +284,89 @@ def handle_itemmaster_phase_2(data, request):
                 return str(row[key]).strip()
         return None
 
+    # Detect format: wide (no "Attribute Name" column) vs vertical (legacy)
+    sample_row = data[0] if data else {}
+    fixed_cols = {"sap item id", "sap_item_id", "uom", "sap item id", "sap material number"}
+    is_wide_format = not any(
+        k.lower().strip() in ("attribute name", "attribute_name", "attribute value", "attribute_value")
+        for k in sample_row.keys()
+    )
+
+    if is_wide_format:
+        # Wide format: each column (except Sap Item Id & Uom) is an attribute name
+        for idx, row in enumerate(data, start=2):
+            try:
+                sap_item_id_value = get_value(row, ["sap_item_id", "Sap Item Id", "SAP Item Id", "SAP Item ID", "sap item id", "SAP_ITEM_ID"])
+                if not sap_item_id_value:
+                    errors.append({"row": idx, "error": "sap_item_id is required"})
+                    continue
+                try:
+                    sap = int(float(sap_item_id_value))
+                except (ValueError, TypeError):
+                    errors.append({"row": idx, "error": f"Invalid sap_item_id: {sap_item_id_value}"})
+                    continue
+
+                item = ItemMaster.objects.filter(sap_item_id=sap).first()
+                if not item:
+                    errors.append({"row": idx, "error": f"ItemMaster with sap_item_id {sap} not found"})
+                    continue
+
+                uom = get_value(row, ["uom", "Uom", "UOM"])
+                attributes = item.attributes or {}
+                if isinstance(attributes, str):
+                    try:
+                        attributes = json.loads(attributes)
+                    except json.JSONDecodeError:
+                        attributes = {}
+
+                skip_cols = {"sap item id", "sap_item_id", "uom", "sap material number"}
+                for col_key, col_val in row.items():
+                    if col_key.lower().strip() in skip_cols:
+                        continue
+                    attr_name = col_key.strip()
+                    attr_value = str(col_val).strip() if col_val is not None and str(col_val).strip() else ""
+
+                    def norm(s): return s.lower().replace(" ", "")
+                    existing_key = next((k for k in attributes if norm(k) == norm(attr_name)), None)
+                    store_key = existing_key if existing_key else attr_name
+
+                    old_attr_data = attributes.get(store_key)
+                    old_value = None
+                    if isinstance(old_attr_data, dict):
+                        old_value = old_attr_data.get("value", "")
+                    elif old_attr_data is not None:
+                        old_value = str(old_attr_data)
+
+                    if uom:
+                        attributes[store_key] = {"value": attr_value, "uom": uom}
+                    else:
+                        attributes[store_key] = attr_value
+
+                    if old_value is None or old_value == "":
+                        created += 1
+                    elif old_value != attr_value:
+                        updated += 1
+                    else:
+                        unchanged += 1
+
+                item.attributes = attributes
+                rebuilt = format_short_name(item.sap_name, attributes)
+                if rebuilt and len(rebuilt) >= 3:
+                    item.short_name = rebuilt[:40]
+                item.save()
+
+            except Exception as e:
+                errors.append({"row": idx, "error": str(e)})
+
+        return JsonResponse({
+            "message": "ItemMaster Phase 2 attribute merge complete",
+            "created": created,
+            "updated": updated,
+            "unchanged": unchanged,
+            "errors": errors,
+        })
+
+    # --- Legacy vertical format below ---
     for idx, row in enumerate(data, start=2):  # start=2 because row 1 is header
         try:
             # Get sap_item_id (handle different header formats)
@@ -291,7 +374,7 @@ def handle_itemmaster_phase_2(data, request):
             if not sap_item_id_value:
                 errors.append({"row": idx, "error": "sap_item_id is required"})
                 continue
-            
+
             # Convert to int
             try:
                 sap = int(float(sap_item_id_value))
@@ -986,49 +1069,52 @@ def generate_matgattribute_template(Model):
 # -------------------------------------------------------------------
 # Generate ItemMaster Attributes Template
 # -------------------------------------------------------------------
-def generate_itemmaster_attributes_template():
-    """Generate template for ItemMaster attributes"""
+def generate_itemmaster_attributes_template(mgrp_code=None):
+    """Generate wide-format attributes template: Sap Item Id | Uom | <attr1> | <attr2> ..."""
+    from matg_attributes.models import MatgAttributeItem
+    from matgroups.models import MatGroup
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Attribute Settings"
-    
-    # Header styling
+
     header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
     header_font = Font(bold=True, color="FFFFFF", size=11)
-    
-    # Headers (including UOM)
-    headers = ["Sap Item Id", "Attribute Name", "Attribute Value", "Uom"]
-    
-    # Write headers
+
+    # Fetch attribute names for the given mgrp_code (ordered by sequence)
+    attr_names = []
+    if mgrp_code:
+        try:
+            matgroup = MatGroup.objects.filter(mgrp_code=mgrp_code.strip().upper()).first()
+            if matgroup:
+                attr_names = list(
+                    MatgAttributeItem.objects.filter(mgrp_code=matgroup, is_deleted=False)
+                    .order_by("print_priority")
+                    .values_list("attribute_name", flat=True)
+                )
+        except Exception:
+            pass
+
+    # Fixed columns + one column per attribute
+    headers = ["Sap Item Id", "Uom"] + attr_names
+
     for col_idx, header in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center", vertical="center")
-    
-    # Set column widths
-    for col_idx in range(1, len(headers) + 1):
-        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 30
-    
-    # Add sample data (including UOM)
-    sample_data = [
-        {"sap_item_id": "12345", "attribute_name": "Color", "attribute_value": "Red", "uom": ""},
-        {"sap_item_id": "12345", "attribute_name": "Size", "attribute_value": "Large", "uom": ""},
-        {"sap_item_id": "12346", "attribute_name": "Color", "attribute_value": "Blue", "uom": ""},
-        {"sap_item_id": "12346", "attribute_name": "Weight", "attribute_value": "10", "uom": "kg"},
-    ]
-    
-    for row_idx, sample_row in enumerate(sample_data, start=2):
-        ws.cell(row=row_idx, column=1, value=sample_row["sap_item_id"])
-        ws.cell(row=row_idx, column=2, value=sample_row["attribute_name"])
-        ws.cell(row=row_idx, column=3, value=sample_row["attribute_value"])
-        ws.cell(row=row_idx, column=4, value=sample_row["uom"])
-    
-    # Create HTTP response
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 25
+
+    # Two blank sample rows
+    for row_idx in range(2, 4):
+        ws.cell(row=row_idx, column=1, value="")
+        ws.cell(row=row_idx, column=2, value="")
+
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    filename = "ItemMaster_Attributes_template.xlsx"
+    mgrp_label = f"_{mgrp_code.upper()}" if mgrp_code else ""
+    filename = f"ItemMaster_Attributes{mgrp_label}_template.xlsx"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
@@ -1097,7 +1183,8 @@ def generate_excel_template(request):
     if model_name.lower() in ("itemmaster", "material"):
         from itemmaster.models import ItemMaster
         if template_type == "attributes":
-            return generate_itemmaster_attributes_template()
+            mgrp_code = request.GET.get("mgrp_code", "")
+            return generate_itemmaster_attributes_template(mgrp_code=mgrp_code)
         else:
             return generate_itemmaster_base_template(ItemMaster)
     

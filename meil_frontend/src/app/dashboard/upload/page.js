@@ -9,6 +9,7 @@ export default function UploadPage() {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [selectedPhase, setSelectedPhase] = useState("1"); // For ItemMaster phase selection
+    const [attrMgrpCode, setAttrMgrpCode] = useState("");
     const fileInputRef = useRef(null);
 
     const templates = ["project", "EmailDomain", "Employee", "MaterialType", "MatgAttributeItem", "Material", "ValidationLists", "SuperGroup", "MatGroup", "ItemMaster", "Company"];
@@ -35,8 +36,9 @@ export default function UploadPage() {
             
             triggerToast("success", `Generating ${templateName} template...`);
 
+            const mgrpParam = templateType === "attributes" && attrMgrpCode ? `&mgrp_code=${attrMgrpCode.trim().toUpperCase()}` : "";
             const url = selectedTemplate === "ItemMaster"
-                ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/uploads/download-template/?model=${selectedTemplate}&type=${templateType}`
+                ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/uploads/download-template/?model=${selectedTemplate}&type=${templateType}${mgrpParam}`
                 : `${process.env.NEXT_PUBLIC_API_BASE_URL}/uploads/download-template/?model=${selectedTemplate}`;
 
             const response = await fetch(url, {
@@ -233,10 +235,17 @@ export default function UploadPage() {
                                         <Download className="w-5 h-5" />
                                         Download Base Values Template
                                     </button>
+                                    <input
+                                        type="text"
+                                        value={attrMgrpCode}
+                                        onChange={(e) => setAttrMgrpCode(e.target.value)}
+                                        placeholder="Enter Material Group Code (e.g. PIPES)"
+                                        className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    />
                                     <button
                                         onClick={() => handleDownload("attributes")}
-                                        disabled={!selectedTemplate}
-                                        className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-xl shadow hover:bg-blue-700 transition-colors"
+                                        disabled={!selectedTemplate || !attrMgrpCode.trim()}
+                                        className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-xl shadow hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <Download className="w-5 h-5" />
                                         Download Attributes Template
