@@ -1562,9 +1562,10 @@ export default function MaterialsPage() {
                         {/* Compact Table Body */}
                         <div className="divide-y divide-gray-200">
                           {Object.entries(viewMaterialAttributes).map(([attrName, attrConfig]) => {
-                            // Case-insensitive lookup in stored attributes JSON
+                            // Case-insensitive + space-insensitive lookup in stored attributes JSON
                             const attrsObj = viewingMaterial.attributes || {};
-                            const matchedKey = Object.keys(attrsObj).find(k => k.toLowerCase() === attrName.toLowerCase());
+                            const normalize = s => s.toLowerCase().replace(/\s+/g, "");
+                            const matchedKey = Object.keys(attrsObj).find(k => normalize(k) === normalize(attrName));
                             const currentValue = matchedKey ? (attrsObj[matchedKey] || "") : "";
                             const uoms = Array.isArray(attrConfig.uom) ? attrConfig.uom : (attrConfig.uom ? [attrConfig.uom] : []);
                             
