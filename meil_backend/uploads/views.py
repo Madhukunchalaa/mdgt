@@ -347,7 +347,12 @@ def handle_itemmaster_phase_2(data, request):
                     attributes = {}
 
             # Get old value before updating (for tracking changes)
-            old_attr_data = attributes.get(attr_name)
+            # Case+space insensitive key match to avoid duplicates on re-upload
+            def norm(s): return s.lower().replace(" ", "")
+            existing_key = next((k for k in attributes if norm(k) == norm(attr_name)), None)
+            store_key = existing_key if existing_key else attr_name
+
+            old_attr_data = attributes.get(store_key)
             old_value = None
             if isinstance(old_attr_data, dict):
                 old_value = old_attr_data.get("value", "")
@@ -355,11 +360,10 @@ def handle_itemmaster_phase_2(data, request):
                 old_value = str(old_attr_data)
 
             # Store attribute value (with UOM if provided)
-            # Store as: {"AttributeName": "value"} or {"AttributeName": {"value": "value", "uom": "kg"}}
             if uom:
-                attributes[attr_name] = {"value": attr_value, "uom": uom}
+                attributes[store_key] = {"value": attr_value, "uom": uom}
             else:
-                attributes[attr_name] = attr_value
+                attributes[store_key] = attr_value
 
             # Track changes
             if old_value is None or old_value == "":
