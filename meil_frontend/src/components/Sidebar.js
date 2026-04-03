@@ -11,6 +11,7 @@ import {
     Package,
     Search,
     Star,
+    Upload,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getUnreadCount } from "../lib/api";
@@ -85,20 +86,21 @@ export default function Sidebar() {
         { name: "Requests", href: "/requests", icon: FilePlus, keywords: ["request"] },
         { name: "Materials", href: "/materials", icon: Package, keywords: ["materials"] },
         { name: "Governance", href: "/governance", icon: ShieldCheck, keywords: ["governance"] },
+        { name: "Uploads", href: "/dashboard/upload", icon: Upload, keywords: ["upload"] },
         { name: "Admin Panel", href: "/dashboard/employees", icon: Home, keywords: ["dashboard"] }
 
     ];
 
     // 🔑 Filter items based on permissions + CRUD flags
     const allowedNavItems = navItems.filter((item) => {
+        // Always show Uploads for MDGT role
+        if (item.keywords.includes("upload") && role?.toLowerCase() === "mdgt") return true;
         const perm = permissions.find((p) =>
             item.keywords.some((kw) =>
                 p.permission_name.toLowerCase().includes(kw)
             )
         );
-        // return perm && (perm.can_create || perm.can_update || perm.can_delete || perm.can_export);
-        return perm
-
+        return perm;
     });
 
 
