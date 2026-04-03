@@ -331,20 +331,11 @@ def handle_itemmaster_phase_2(data, request):
                 # If we can't find the attribute definition, we'll skip validation
                 pass
 
-            # Validate attribute value if validation rule exists
+            # Only validate if a regex/type validation rule is explicitly set; skip possible_values check on bulk upload
             if attr_def and attr_def.validation and attr_value:
                 is_valid, error_msg = validate_attribute_value(attr_value, attr_def.validation)
                 if not is_valid:
                     errors.append({"row": idx, "error": error_msg})
-                    continue
-                # If validation passes, allow the value even if it's not in possible_values (custom values are allowed)
-            # If no validation type is set, check possible_values
-            elif attr_def and attr_def.possible_values and len(attr_def.possible_values) > 0:
-                if attr_value not in attr_def.possible_values:
-                    errors.append({
-                        "row": idx,
-                        "error": f"Value '{attr_value}' is not in allowed values: {', '.join(attr_def.possible_values)}"
-                    })
                     continue
 
             # Ensure JSON is dict
@@ -760,7 +751,7 @@ def bulk_upload(request):
                 # Try to find Attributes sheet (case-insensitive)
                 attributes_sheet = None
                 for sheet_name in wb.sheetnames:
-                    if sheet_name.lower().strip() == "attributes":
+                    if sheet_name.lower().strip() in ("attributes", "attribute settings"):
                         attributes_sheet = wb[sheet_name]
                         break
                 
