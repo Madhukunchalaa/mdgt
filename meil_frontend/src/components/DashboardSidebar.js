@@ -42,6 +42,8 @@ export default function DashboardSidebar() {
     // Build nav items dynamically
    // Build nav items dynamically in correct order
 const navItems = permissionRouteMap.filter((route) => {
+  // Always show Uploads for MDGT role
+  if (route.keywords.includes("upload") && role?.toLowerCase() === "mdgt") return true;
   return permissions.some((p) =>
     route.keywords.some((kw) =>
       p.permission_name.toLowerCase().includes(kw)
