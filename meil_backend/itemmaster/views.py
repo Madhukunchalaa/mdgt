@@ -23,8 +23,13 @@ def format_short_name(sap_name, attributes):
     if sap_name:
         parts.append(str(sap_name))
     if attributes and isinstance(attributes, dict):
-        attr_vals = [str(v) for v in attributes.values() if v]
-        parts.extend(attr_vals)
+        for v in attributes.values():
+            if isinstance(v, dict):
+                val = v.get("value", "")
+            else:
+                val = v
+            if val:
+                parts.append(str(val))
     return ", ".join(parts)
 
 # Helper function to format long_name: SAP Description + mgrp_code + mgrp_longname + attr_name: attr_value pairs
@@ -38,8 +43,13 @@ def format_long_name(sap_name, mgrp_code, mgrp_long_name, attributes):
     if mgrp_long_name:
         parts.append(str(mgrp_long_name))
     if attributes and isinstance(attributes, dict):
-        attr_pairs = [f"{k}: {v}" for k, v in attributes.items() if v]
-        parts.extend(attr_pairs)
+        for k, v in attributes.items():
+            if isinstance(v, dict):
+                val = v.get("value", "")
+            else:
+                val = v
+            if val:
+                parts.append(f"{k}: {val}")
     return ", ".join(parts)
 
 
