@@ -38,4 +38,11 @@ class ItemMasterSerializer(serializers.ModelSerializer):
             "mgrp_long_name",
             "attributes",
             "is_final",
+            "item_type",
+            "item_number",
+            "moc",
+            "item_size",
+            "part_number",
+            "model",
+            "make",
         ]

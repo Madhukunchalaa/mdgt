@@ -623,37 +623,55 @@ export default function MaterialDetailPage() {
                   {/* Item Attributes - Display actual values in table format */}
                   <div className="mb-3">
                     <h4 className="text-xs font-medium text-gray-700 mb-1.5">Attributes</h4>
-                    {itemDetails.item.attributes && Object.keys(itemDetails.item.attributes).length > 0 ? (
-                      <div className="bg-gray-50">
-                        <table className="w-full">
-                          <tbody>
-                            {Object.entries(itemDetails.item.attributes).map(([key, value], index) => {
-                              // Find the attribute definition to get UOM
-                              const attrDef = itemDetails.attributes?.find(attr => attr.attrib_name === key);
-                              const uom = attrDef?.unit;
+                    {(() => {
+                      const specFields = [
+                        { label: "Type", key: "item_type" },
+                        { label: "Number", key: "item_number" },
+                        { label: "MOC", key: "moc" },
+                        { label: "Size", key: "item_size" },
+                        { label: "Part Number", key: "part_number" },
+                        { label: "Model", key: "model" },
+                        { label: "Make", key: "make" },
+                      ].filter(f => itemDetails.item[f.key]);
 
-                              return (
-                                <tr key={key} className={index !== Object.keys(itemDetails.item.attributes).length - 1 ? "border-b border-gray-200" : ""}>
-                                  <td className="px-2 py-1.5 text-xs font-medium text-gray-700">
-                                    {key}
-                                    {uom && (
-                                      <span className="ml-1.5 text-xs text-gray-500">({uom})</span>
-                                    )}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-xs text-gray-700 font-medium text-right bg-white">
-                                    {value || "-"}
-                                  </td>
+                      const attrEntries = itemDetails.item.attributes && Object.keys(itemDetails.item.attributes).length > 0
+                        ? Object.entries(itemDetails.item.attributes)
+                        : [];
+
+                      const hasData = specFields.length > 0 || attrEntries.length > 0;
+
+                      return hasData ? (
+                        <div className="bg-gray-50">
+                          <table className="w-full">
+                            <tbody>
+                              {specFields.map((f, index) => (
+                                <tr key={f.key} className={index !== specFields.length - 1 || attrEntries.length > 0 ? "border-b border-gray-200" : ""}>
+                                  <td className="px-2 py-1.5 text-xs font-medium text-gray-700">{f.label}</td>
+                                  <td className="px-2 py-1.5 text-xs text-gray-700 font-medium text-right bg-white">{itemDetails.item[f.key]}</td>
                                 </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 p-2 text-xs text-gray-500 text-center">
-                        No attributes defined for this item
-                      </div>
-                    )}
+                              ))}
+                              {attrEntries.map(([key, value], index) => {
+                                const attrDef = itemDetails.attributes?.find(attr => attr.attrib_name === key);
+                                const uom = attrDef?.unit;
+                                return (
+                                  <tr key={key} className={index !== attrEntries.length - 1 ? "border-b border-gray-200" : ""}>
+                                    <td className="px-2 py-1.5 text-xs font-medium text-gray-700">
+                                      {key}
+                                      {uom && <span className="ml-1.5 text-xs text-gray-500">({uom})</span>}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-xs text-gray-700 font-medium text-right bg-white">{value || "-"}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 p-2 text-xs text-gray-500 text-center">
+                          No attributes defined for this item
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Buttons inside details */}
