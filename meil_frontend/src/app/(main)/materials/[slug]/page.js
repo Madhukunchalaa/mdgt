@@ -652,14 +652,19 @@ export default function MaterialDetailPage() {
                               ))}
                               {attrEntries.map(([key, value], index) => {
                                 const attrDef = itemDetails.attributes?.find(attr => attr.attrib_name === key);
-                                const uom = attrDef?.unit;
+                                const displayVal = typeof value === "object" && value !== null
+                                  ? (value.value ?? "-")
+                                  : (value || "-");
+                                const displayUom = typeof value === "object" && value !== null
+                                  ? (value.uom || attrDef?.unit || "")
+                                  : (attrDef?.unit || "");
                                 return (
                                   <tr key={key} className={index !== attrEntries.length - 1 ? "border-b border-gray-200" : ""}>
                                     <td className="px-2 py-1.5 text-xs font-medium text-gray-700">
                                       {key}
-                                      {uom && <span className="ml-1.5 text-xs text-gray-500">({uom})</span>}
+                                      {displayUom && <span className="ml-1.5 text-xs text-gray-500">({displayUom})</span>}
                                     </td>
-                                    <td className="px-2 py-1.5 text-xs text-gray-700 font-medium text-right bg-white">{value || "-"}</td>
+                                    <td className="px-2 py-1.5 text-xs text-gray-700 font-medium text-right bg-white">{displayVal}</td>
                                   </tr>
                                 );
                               })}
