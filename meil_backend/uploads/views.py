@@ -861,13 +861,6 @@ def generate_itemmaster_base_template(Model):
         ("Mgrp Long Name",  "mgrp_long_name", 30),
         ("SAP Name",        "sap_name",       25),
         ("Search Text",     "search_text",    30),
-        ("Type",            "item_type",      15),
-        ("Number",          "item_number",    15),
-        ("MOC",             "moc",            15),
-        ("Size",            "item_size",      15),
-        ("Part Number",     "part_number",    18),
-        ("Model",           "model",          15),
-        ("Make",            "make",           15),
     ]
 
     header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
@@ -887,16 +880,12 @@ def generate_itemmaster_base_template(Model):
             "short_name": "SS LATROLET 3/4\"", "long_name": "Stainless Steel Latrolet 3/4 inch",
             "mgrp_long_name": "Pipe Fittings Latrolet", "sap_name": "SS LATROLET 3/4\"",
             "search_text": "latrolet pipe fitting ss",
-            "item_type": "Fitting", "item_number": "LT-001", "moc": "SS316",
-            "item_size": "3/4\"", "part_number": "PRT-LT-001", "model": "LT-STD", "make": "Swagelok",
         },
         {
             "sap_item_id": "12346", "mat_type_code": "ROH", "mgrp_code": "MPFITNIPH",
             "short_name": "CS NIPPLE HEX 1\"", "long_name": "Carbon Steel Hex Nipple 1 inch",
             "mgrp_long_name": "Pipe Fittings Nipple Hex", "sap_name": "CS NIPPLE HEX 1\"",
             "search_text": "nipple hex pipe fitting cs",
-            "item_type": "Fitting", "item_number": "NH-002", "moc": "CS",
-            "item_size": "1\"", "part_number": "PRT-NH-002", "model": "NH-STD", "make": "Parker",
         },
     ]
 
