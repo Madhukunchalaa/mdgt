@@ -12,7 +12,7 @@ export default function UploadPage() {
     const fileInputRef = useRef(null);
 
     const templates = ["project", "EmailDomain", "Employee", "MaterialType", "MatgAttributeItem", "Material", "ValidationLists", "SuperGroup", "MatGroup", "ItemMaster", "Company"];
-    const templateLabels = { "MatgAttributeItem": "Material Attribute" };
+    const templateLabels = { "MatgAttributeItem": "MatGroupItem" };
 
     const triggerToast = (type, message) => {
         window.dispatchEvent(new CustomEvent('showToast', {
