@@ -1546,9 +1546,35 @@ export default function MaterialsPage() {
                       <p>No Material Group selected for this material.</p>
                     </div>
                   ) : !viewMaterialAttributes || (viewMaterialAttributes && Object.keys(viewMaterialAttributes).length === 0) ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No attributes found for the selected Material Group.</p>
-                    </div>
+                    // No MatgAttributeItem definitions — fall back to raw attributes JSON if available
+                    viewingMaterial.attributes && Object.keys(viewingMaterial.attributes).length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <div className="min-w-full">
+                          <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-100 border-b border-gray-300 text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            <div className="col-span-4">Attribute Name</div>
+                            <div className="col-span-6">Value</div>
+                            <div className="col-span-2">UOM</div>
+                          </div>
+                          <div className="divide-y divide-gray-200">
+                            {Object.entries(viewingMaterial.attributes).map(([key, val]) => {
+                              const value = typeof val === "object" ? val?.value : val;
+                              const uom = typeof val === "object" ? val?.uom : "";
+                              return (
+                                <div key={key} className="grid grid-cols-12 gap-2 px-3 py-2.5 hover:bg-gray-50 transition-colors">
+                                  <div className="col-span-4"><span className="text-sm font-medium text-gray-900">{key}</span></div>
+                                  <div className="col-span-6"><span className="text-sm text-gray-700">{value || "-"}</span></div>
+                                  <div className="col-span-2"><span className="text-sm text-gray-600">{uom || "-"}</span></div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>No attributes found for this material.</p>
+                      </div>
+                    )
                   ) : (
                     <div className="overflow-x-auto">
                       <div className="min-w-full">
