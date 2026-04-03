@@ -210,7 +210,8 @@ export default function MaterialSearchPage() {
   // Handle free text group select
   const handleFreeTextSelect = () => {
     if (selectedFreeTextGroup) {
-      router.push(`/materials/${selectedFreeTextGroup}`);
+      const q = freeTextQuery.trim();
+      router.push(`/materials/${selectedFreeTextGroup}${q ? `?q=${encodeURIComponent(q)}` : ""}`);
     }
   };
 
@@ -833,11 +834,11 @@ export default function MaterialSearchPage() {
                       return (
                         <div
                           key={code}
-                          onClick={() => router.push(`/materials/${code}`)}
+                          onClick={() => router.push(`/materials/${code}${freeTextQuery.trim() ? `?q=${encodeURIComponent(freeTextQuery.trim())}` : ""}`)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
-                              router.push(`/materials/${code}`);
+                              router.push(`/materials/${code}${freeTextQuery.trim() ? `?q=${encodeURIComponent(freeTextQuery.trim())}` : ""}`);
                             }
                           }}
                           role="button"
