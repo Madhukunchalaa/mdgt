@@ -1592,14 +1592,17 @@ export default function MaterialsPage() {
                             const attrsObj = viewingMaterial.attributes || {};
                             const normalize = s => s.toLowerCase().replace(/\s+/g, "");
                             const matchedKey = Object.keys(attrsObj).find(k => normalize(k) === normalize(attrName));
-                            const currentValue = matchedKey ? (attrsObj[matchedKey] || "") : "";
+                            const rawValue = matchedKey ? (attrsObj[matchedKey] || "") : "";
+                            // rawValue may be a string or {value, uom} object
+                            const currentValue = typeof rawValue === "object" ? (rawValue?.value ?? "") : String(rawValue);
+                            const storedUOM = typeof rawValue === "object" ? (rawValue?.uom ?? "") : "";
                             const uoms = Array.isArray(attrConfig.uom) ? attrConfig.uom : (attrConfig.uom ? [attrConfig.uom] : []);
-                            
-                            // Extract UOM from value if present
+
+                            // Extract UOM from value string if present
                             let displayValue = currentValue;
-                            let displayUOM = "";
-                            let hasUOMInValue = false;
-                            if (currentValue && uoms.length > 0) {
+                            let displayUOM = storedUOM;
+                            let hasUOMInValue = !!storedUOM;
+                            if (currentValue && uoms.length > 0 && !storedUOM) {
                               for (const uom of uoms) {
                                 if (currentValue.endsWith(` ${uom}`)) {
                                   displayValue = currentValue.replace(` ${uom}`, "");
@@ -1609,9 +1612,7 @@ export default function MaterialsPage() {
                                 }
                               }
                             }
-                            
-                            // Only show UOM if it was actually used in the value
-                            // If no UOM is in the value, show "-" even if UOMs are available
+
                             const showUOM = hasUOMInValue ? displayUOM : "-";
                             
                             return (
