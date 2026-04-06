@@ -68,7 +68,7 @@ export default function CompaniesPage() {
   });
   const { sortedData: sortedCompanies, requestSort, getSortIcon } = useSortableData(filteredCompanies);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const headers = ["Company Name", "Contact", "Created", "Updated"];
     const rows = sortedCompanies.map(c => [
       c.company_name || "",
@@ -76,7 +76,7 @@ export default function CompaniesPage() {
       c.created ? new Date(c.created).toLocaleDateString("en-IN") : "",
       c.updated ? new Date(c.updated).toLocaleDateString("en-IN") : "",
     ]);
-    exportToExcel("Companies", headers, rows, "Companies");
+    await exportToExcel("Companies", headers, rows, "Companies");
   };
 
   // const role = localStorage.getItem("role");
@@ -194,11 +194,12 @@ export default function CompaniesPage() {
             {role === "MDGT" && sortedCompanies.length > 0 && (
               <button
                 onClick={handleDownload}
-                className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
                 title={`Download ${sortedCompanies.length} companies as Excel`}
               >
-                <Download size={14} className="mr-1.5" />
+                <Download size={14} />
                 Download
+                <span className="bg-white text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{sortedCompanies.length}</span>
               </button>
             )}
             {checkPermission("companies", "create") && (

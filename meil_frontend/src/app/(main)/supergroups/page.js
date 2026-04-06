@@ -95,7 +95,7 @@ export default function SupergroupsPage() {
 
   const { sortedData: sortedSupergroups, requestSort, getSortIcon } = useSortableData(filteredSupergroups);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const headers = ["Code", "Name", "Department", "Created", "Created By"];
     const rows = sortedSupergroups.map(s => [
       s.sgrp_code || "",
@@ -104,7 +104,7 @@ export default function SupergroupsPage() {
       s.created ? new Date(s.created).toLocaleDateString("en-IN") : "",
       s.createdby || "",
     ]);
-    exportToExcel("Super Groups", headers, rows, "SuperGroups");
+    await exportToExcel("Super Groups", headers, rows, "SuperGroups");
   };
 
   // Pagination logic
@@ -255,11 +255,12 @@ export default function SupergroupsPage() {
             {role === "MDGT" && sortedSupergroups.length > 0 && (
               <button
                 onClick={handleDownload}
-                className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
                 title={`Download ${sortedSupergroups.length} supergroups as Excel`}
               >
-                <Download size={14} className="mr-1.5" />
+                <Download size={14} />
                 Download
+                <span className="bg-white text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{sortedSupergroups.length}</span>
               </button>
             )}
             {checkPermission("super", "create") && (

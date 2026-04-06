@@ -60,10 +60,10 @@ export default function ItemsPage() {
     );
     const { sortedData: sortedItems, requestSort, getSortIcon } = useSortableData(filteredItems);
 
-    const handleDownload = () => {
+    const handleDownload = async () => {
         const headers = ["ID", "Name", "Type", "Quantity", "Price", "Status"];
         const rows = sortedItems.map(i => [i.id, i.name, i.type, i.quantity, i.price, i.status]);
-        exportToExcel("Items", headers, rows, "Items");
+        await exportToExcel("Items", headers, rows, "Items");
     };
 
     return (
@@ -95,11 +95,12 @@ export default function ItemsPage() {
                     {role === "MDGT" && sortedItems.length > 0 && (
                         <button
                             onClick={handleDownload}
-                            className="flex items-center px-3 py-2 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                            className="flex items-center gap-2 px-3 py-2 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
                             title={`Download ${sortedItems.length} items as Excel`}
                         >
-                            <Download className="w-4 h-4 mr-1.5" />
+                            <Download className="w-4 h-4" />
                             Download
+                            <span className="bg-white text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{sortedItems.length}</span>
                         </button>
                     )}
                 </div>

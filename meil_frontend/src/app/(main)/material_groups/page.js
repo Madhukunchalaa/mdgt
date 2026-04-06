@@ -212,7 +212,7 @@ export default function MaterialGroupsPage() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const headers = ["Code", "Short Name", "Long Name", "Super Group", "Search Type", "Notes", "Created"];
     const rows = sortedGroups.map(g => [
       g.mgrp_code || "",
@@ -223,7 +223,7 @@ export default function MaterialGroupsPage() {
       g.notes || "",
       g.created ? new Date(g.created).toLocaleDateString("en-IN") : "",
     ]);
-    exportToExcel("Material Groups", headers, rows, "MaterialGroups");
+    await exportToExcel("Material Groups", headers, rows, "MaterialGroups");
   };
 
   return (
@@ -258,11 +258,12 @@ export default function MaterialGroupsPage() {
             {role === "MDGT" && sortedGroups.length > 0 && (
               <button
                 onClick={handleDownload}
-                className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg"
-                title={`Download ${sortedGroups.length} groups as CSV`}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg"
+                title={`Download ${sortedGroups.length} groups as Excel`}
               >
-                <Download size={16} className="mr-1.5" />
+                <Download size={16} />
                 Download
+                <span className="bg-white text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{sortedGroups.length}</span>
               </button>
             )}
             {checkPermission("group", "create") && (

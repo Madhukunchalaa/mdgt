@@ -175,7 +175,7 @@ export default function EmployeesPage() {
 
     const { sortedData: sortedEmployees, requestSort, getSortIcon } = useSortableData(filteredEmployees);
 
-    const handleDownload = () => {
+    const handleDownload = async () => {
         const headers = ["Name", "Email", "Role", "Company", "Created", "Created By", "Updated", "Updated By"];
         const rows = sortedEmployees.map(e => [
             e.emp_name || "",
@@ -187,7 +187,7 @@ export default function EmployeesPage() {
             e.updated ? new Date(e.updated).toLocaleDateString("en-IN") : "",
             e.updatedby || "",
         ]);
-        exportToExcel("Employees", headers, rows, "Employees");
+        await exportToExcel("Employees", headers, rows, "Employees");
     };
 
     if (loading) return <p className="text-center p-6">Loading...</p>;
@@ -224,11 +224,12 @@ export default function EmployeesPage() {
                 {role === "MDGT" && sortedEmployees.length > 0 && (
                     <button
                         onClick={handleDownload}
-                        className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
                         title={`Download ${sortedEmployees.length} employees as Excel`}
                     >
-                        <Download className="w-4 h-4 mr-1" />
+                        <Download className="w-4 h-4" />
                         Download
+                        <span className="bg-white text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{sortedEmployees.length}</span>
                     </button>
                 )}
                 {checkPermission("employee", "create") && (

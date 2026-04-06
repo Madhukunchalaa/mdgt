@@ -115,7 +115,7 @@ export default function RequestsPage() {
     });
     const { sortedData: sortedRequests, requestSort, getSortIcon } = useSortableData(filteredRequests);
 
-    const handleDownload = () => {
+    const handleDownload = async () => {
         const headers = ["Request ID", "Type", "Project Code", "Notes", "SAP Item", "Status", "Created By", "Created"];
         const rows = sortedRequests.map(r => [
             r.request_id || "",
@@ -127,7 +127,7 @@ export default function RequestsPage() {
             r.created_by || r.createdby || "",
             r.created ? new Date(r.created).toLocaleDateString("en-IN") : "",
         ]);
-        exportToExcel("Requests", headers, rows, "Requests");
+        await exportToExcel("Requests", headers, rows, "Requests");
     };
 
     // Modal handlers
@@ -411,11 +411,12 @@ export default function RequestsPage() {
                         {role === "MDGT" && sortedRequests.length > 0 && (
                             <button
                                 onClick={handleDownload}
-                                className="flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
                                 title={`Download ${sortedRequests.length} requests as Excel`}
                             >
-                                <Download size={18} className="mr-2" />
+                                <Download size={18} />
                                 Download
+                                <span className="bg-white text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{sortedRequests.length}</span>
                             </button>
                         )}
                         {checkPermission("request", "create") && (

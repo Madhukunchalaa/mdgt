@@ -63,7 +63,7 @@ export default function MaterialTypesPage() {
 
   const { sortedData: sortedTypes, requestSort, getSortIcon } = useSortableData(filteredTypes);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const headers = ["Type Code", "Description", "Created", "Created By", "Updated"];
     const rows = sortedTypes.map(t => [
       t.mat_type_code || "",
@@ -72,7 +72,7 @@ export default function MaterialTypesPage() {
       t.createdby || "",
       t.updated ? new Date(t.updated).toLocaleDateString("en-IN") : "",
     ]);
-    exportToExcel("Material Types", headers, rows, "MaterialTypes");
+    await exportToExcel("Material Types", headers, rows, "MaterialTypes");
   };
 
   // Pagination logic
@@ -221,11 +221,12 @@ export default function MaterialTypesPage() {
             {role === "MDGT" && sortedTypes.length > 0 && (
               <button
                 onClick={handleDownload}
-                className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
                 title={`Download ${sortedTypes.length} types as Excel`}
               >
-                <Download size={14} className="mr-1.5" />
+                <Download size={14} />
                 Download
+                <span className="bg-white text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{sortedTypes.length}</span>
               </button>
             )}
             {checkPermission("type", "create") && (
