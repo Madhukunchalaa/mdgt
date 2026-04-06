@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-    Plus, Edit, Trash2, Search, FileText, Info, Loader2, Eye, MessageSquare, Save, X, Tag, Bell
+    Plus, Edit, Trash2, Search, FileText, Info, Loader2, Eye, MessageSquare, Save, X, Tag, Bell, Download
 } from "lucide-react";
 import { useSortableData } from "@/hooks/useSortableData";
+import { exportToExcel } from "@/lib/exportExcel";
 import {
     fetchRequests,
     createRequest,
@@ -113,6 +114,21 @@ export default function RequestsPage() {
         return matchesSearch;
     });
     const { sortedData: sortedRequests, requestSort, getSortIcon } = useSortableData(filteredRequests);
+
+    const handleDownload = () => {
+        const headers = ["Request ID", "Type", "Project Code", "Notes", "SAP Item", "Status", "Created By", "Created"];
+        const rows = sortedRequests.map(r => [
+            r.request_id || "",
+            r.type || "",
+            r.project_code || "",
+            r.notes || "",
+            r.sap_item || "",
+            r.status || "",
+            r.created_by || r.createdby || "",
+            r.created ? new Date(r.created).toLocaleDateString("en-IN") : "",
+        ]);
+        exportToExcel("Requests", headers, rows, "Requests");
+    };
 
     // Modal handlers
     const handleAddNew = () => {
@@ -392,6 +408,16 @@ export default function RequestsPage() {
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
+                        {sortedRequests.length > 0 && (
+                            <button
+                                onClick={handleDownload}
+                                className="flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                                title={`Download ${sortedRequests.length} requests as Excel`}
+                            >
+                                <Download size={18} className="mr-2" />
+                                Download
+                            </button>
+                        )}
                         {checkPermission("request", "create") && (
                         <button
                             onClick={handleAddNew}

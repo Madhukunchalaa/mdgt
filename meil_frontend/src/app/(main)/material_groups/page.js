@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import {
   Plus, Edit, Trash2, Search, Folder, Info, Loader2, ChevronLeft, ChevronRight, CheckCircle, PlusCircle, FolderOpen, Eye, Download
 } from "lucide-react";
-import { 
+import { exportToExcel } from "@/lib/exportExcel";
+import {
   fetchMaterialGroups,
   createMaterialGroup,
   updateMaterialGroup,
@@ -212,27 +213,17 @@ export default function MaterialGroupsPage() {
   };
 
   const handleDownload = () => {
-    const headers = ["Mgrp Code", "Mgrp Shortname", "Mgrp Longname", "Sgrp Code", "Notes", "Created"];
+    const headers = ["Code", "Short Name", "Long Name", "Super Group", "Search Type", "Notes", "Created"];
     const rows = sortedGroups.map(g => [
       g.mgrp_code || "",
       g.mgrp_shortname || "",
       g.mgrp_longname || "",
       g.supergroup || g.sgrp_code || "",
+      g.search_type || "",
       g.notes || "",
-      g.created || "",
+      g.created ? new Date(g.created).toLocaleDateString("en-IN") : "",
     ]);
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `MatGroups_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    exportToExcel("Material Groups", headers, rows, "MaterialGroups");
   };
 
   return (

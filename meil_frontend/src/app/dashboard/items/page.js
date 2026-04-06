@@ -1,8 +1,9 @@
 // app/dashboard/items/page.js
 "use client";
 import { useState } from "react";
-import { Package, Plus, Edit, Trash2, Search, Box, DollarSign } from "lucide-react";
+import { Package, Plus, Edit, Trash2, Search, Box, DollarSign, Download } from "lucide-react";
 import { useSortableData } from "@/hooks/useSortableData";
+import { exportToExcel } from "@/lib/exportExcel";
 
 export default function ItemsPage() {
     const [items, setItems] = useState([
@@ -57,6 +58,12 @@ export default function ItemsPage() {
     );
     const { sortedData: sortedItems, requestSort, getSortIcon } = useSortableData(filteredItems);
 
+    const handleDownload = () => {
+        const headers = ["ID", "Name", "Type", "Quantity", "Price", "Status"];
+        const rows = sortedItems.map(i => [i.id, i.name, i.type, i.quantity, i.price, i.status]);
+        exportToExcel("Items", headers, rows, "Items");
+    };
+
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
@@ -72,15 +79,27 @@ export default function ItemsPage() {
 
             {/* Search */}
             <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
-                <div className="relative">
-                    <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Search items..."
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search items..."
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    {sortedItems.length > 0 && (
+                        <button
+                            onClick={handleDownload}
+                            className="flex items-center px-3 py-2 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                            title={`Download ${sortedItems.length} items as Excel`}
+                        >
+                            <Download className="w-4 h-4 mr-1.5" />
+                            Download
+                        </button>
+                    )}
                 </div>
             </div>
 

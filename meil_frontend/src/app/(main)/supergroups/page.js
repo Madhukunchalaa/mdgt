@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Plus, Edit, Trash2, Search, Users, Info, Loader2, Eye
+  Plus, Edit, Trash2, Search, Users, Info, Loader2, Eye, Download
 } from "lucide-react";
 import { fetchSuperGroups, createSuperGroup, updateSuperGroup, deleteSuperGroup, restoreSuperGroup } from "../../../lib/api";
 import {useAuth} from "@/context/AuthContext";
 import BackButton from "@/components/BackButton";
 import ViewModal from "@/components/ViewModal";
 import { useSortableData } from "@/hooks/useSortableData";
+import { exportToExcel } from "@/lib/exportExcel";
 
 export default function SupergroupsPage() {
   const [supergroups, setSupergroups] = useState([]);
@@ -93,6 +94,18 @@ export default function SupergroupsPage() {
   });
 
   const { sortedData: sortedSupergroups, requestSort, getSortIcon } = useSortableData(filteredSupergroups);
+
+  const handleDownload = () => {
+    const headers = ["Code", "Name", "Department", "Created", "Created By"];
+    const rows = sortedSupergroups.map(s => [
+      s.sgrp_code || "",
+      s.sgrp_name || "",
+      s.dept_name || "",
+      s.created ? new Date(s.created).toLocaleDateString("en-IN") : "",
+      s.createdby || "",
+    ]);
+    exportToExcel("Super Groups", headers, rows, "SuperGroups");
+  };
 
   // Pagination logic
   const totalPages = Math.ceil(sortedSupergroups.length / itemsPerPage);
@@ -239,6 +252,16 @@ export default function SupergroupsPage() {
               <Trash2 size={14} className="mr-1.5" />
               {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
             </button>
+            {sortedSupergroups.length > 0 && (
+              <button
+                onClick={handleDownload}
+                className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                title={`Download ${sortedSupergroups.length} supergroups as Excel`}
+              >
+                <Download size={14} className="mr-1.5" />
+                Download
+              </button>
+            )}
             {checkPermission("super", "create") && (
               <button
                 onClick={handleAddNew}

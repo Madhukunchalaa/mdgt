@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Plus, Edit, Trash2, Search, Building, Info, Loader2, X
+  Plus, Edit, Trash2, Search, Building, Info, Loader2, X, Download
 } from "lucide-react";
+import { exportToExcel } from "@/lib/exportExcel";
 import { 
   fetchCompanies, 
   createCompany, 
@@ -54,6 +55,7 @@ export default function CompaniesPage() {
       console.error("Error loading companies:", err);
     } finally {
       setLoading(false);
+    }
   };
 
   // Filter companies
@@ -65,6 +67,17 @@ export default function CompaniesPage() {
     return matchesSearch;
   });
   const { sortedData: sortedCompanies, requestSort, getSortIcon } = useSortableData(filteredCompanies);
+
+  const handleDownload = () => {
+    const headers = ["Company Name", "Contact", "Created", "Updated"];
+    const rows = sortedCompanies.map(c => [
+      c.company_name || "",
+      c.contact || "",
+      c.created ? new Date(c.created).toLocaleDateString("en-IN") : "",
+      c.updated ? new Date(c.updated).toLocaleDateString("en-IN") : "",
+    ]);
+    exportToExcel("Companies", headers, rows, "Companies");
+  };
 
   // const role = localStorage.getItem("role");
 
@@ -135,21 +148,19 @@ export default function CompaniesPage() {
   };
 
   const handleDelete = async (company_name) => {
-    
-      try {
-        setError(null);
-        const token = localStorage.getItem("token");
-        if (!token) {
-          setError("No authentication token found");
-          return;
-        }
-
-        await deleteCompany(token, company_name);
-        await loadCompanies();
-      } catch (err) {
-        setError("Failed to delete company: " + (err.response?.data?.message || err.message || "Unknown error"));
-        console.error("Error deleting company:", err);
+    try {
+      setError(null);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("No authentication token found");
+        return;
       }
+
+      await deleteCompany(token, company_name);
+      await loadCompanies();
+    } catch (err) {
+      setError("Failed to delete company: " + (err.response?.data?.message || err.message || "Unknown error"));
+      console.error("Error deleting company:", err);
     }
   };
   console.log("role",role);
@@ -180,6 +191,16 @@ export default function CompaniesPage() {
               <Trash2 size={14} className="mr-1.5" />
               {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
             </button>
+            {sortedCompanies.length > 0 && (
+              <button
+                onClick={handleDownload}
+                className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                title={`Download ${sortedCompanies.length} companies as Excel`}
+              >
+                <Download size={14} className="mr-1.5" />
+                Download
+              </button>
+            )}
             {checkPermission("companies", "create") && (
   <button
     onClick={handleAddNew}

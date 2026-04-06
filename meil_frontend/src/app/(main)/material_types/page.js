@@ -2,8 +2,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Plus, Edit, Trash2, Search, Tag, Info, Loader2, Eye
+  Plus, Edit, Trash2, Search, Tag, Info, Loader2, Eye, Download
 } from "lucide-react";
+import { exportToExcel } from "@/lib/exportExcel";
 import {
   fetchMaterialTypes,
   createMaterialType,
@@ -61,6 +62,18 @@ export default function MaterialTypesPage() {
   });
 
   const { sortedData: sortedTypes, requestSort, getSortIcon } = useSortableData(filteredTypes);
+
+  const handleDownload = () => {
+    const headers = ["Type Code", "Description", "Created", "Created By", "Updated"];
+    const rows = sortedTypes.map(t => [
+      t.mat_type_code || "",
+      t.mat_type_desc || "",
+      t.created ? new Date(t.created).toLocaleDateString("en-IN") : "",
+      t.createdby || "",
+      t.updated ? new Date(t.updated).toLocaleDateString("en-IN") : "",
+    ]);
+    exportToExcel("Material Types", headers, rows, "MaterialTypes");
+  };
 
   // Pagination logic
   const totalPages = Math.ceil(sortedTypes.length / itemsPerPage);
@@ -205,6 +218,16 @@ export default function MaterialTypesPage() {
               <Trash2 size={14} className="mr-1.5" />
               {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
             </button>
+            {sortedTypes.length > 0 && (
+              <button
+                onClick={handleDownload}
+                className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                title={`Download ${sortedTypes.length} types as Excel`}
+              >
+                <Download size={14} className="mr-1.5" />
+                Download
+              </button>
+            )}
             {checkPermission("type", "create") && (
               <button
                 onClick={handleAddNew}
