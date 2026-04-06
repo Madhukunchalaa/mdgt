@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Package, Plus, Edit, Trash2, Search, Box, DollarSign, Download } from "lucide-react";
 import { useSortableData } from "@/hooks/useSortableData";
 import { exportToExcel } from "@/lib/exportExcel";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ItemsPage() {
+    const { role } = useAuth();
     const [items, setItems] = useState([
         { id: 101, name: "Laptop", type: "Electronics", quantity: 15, price: 1200, status: "In Stock" },
         { id: 102, name: "Office Chair", type: "Furniture", quantity: 25, price: 250, status: "In Stock" },
@@ -90,7 +92,7 @@ export default function ItemsPage() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    {sortedItems.length > 0 && (
+                    {role === "MDGT" && sortedItems.length > 0 && (
                         <button
                             onClick={handleDownload}
                             className="flex items-center px-3 py-2 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"

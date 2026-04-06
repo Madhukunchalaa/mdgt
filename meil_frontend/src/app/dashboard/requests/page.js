@@ -408,7 +408,7 @@ export default function RequestsPage() {
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-                        {sortedRequests.length > 0 && (
+                        {role === "MDGT" && sortedRequests.length > 0 && (
                             <button
                                 onClick={handleDownload}
                                 className="flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"

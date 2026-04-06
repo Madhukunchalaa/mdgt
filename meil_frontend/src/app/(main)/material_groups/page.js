@@ -255,7 +255,7 @@ export default function MaterialGroupsPage() {
               <Trash2 size={14} className="mr-1.5" />
               {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
             </button>
-            {checkPermission("group", "export") && sortedGroups.length > 0 && (
+            {role === "MDGT" && sortedGroups.length > 0 && (
               <button
                 onClick={handleDownload}
                 className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg"

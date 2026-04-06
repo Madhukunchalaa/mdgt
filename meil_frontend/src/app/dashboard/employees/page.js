@@ -8,7 +8,7 @@ import { useSortableData } from "@/hooks/useSortableData";
 import { exportToExcel } from "@/lib/exportExcel";
 
 export default function EmployeesPage() {
-    const { token, user, loading, checkPermission } = useAuth(); // 👈 use token and checkPermission
+    const { token, user, loading, checkPermission, role } = useAuth(); // 👈 use token and checkPermission
     const [employees, setEmployees] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState(null);
@@ -221,7 +221,7 @@ export default function EmployeesPage() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                {sortedEmployees.length > 0 && (
+                {role === "MDGT" && sortedEmployees.length > 0 && (
                     <button
                         onClick={handleDownload}
                         className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"

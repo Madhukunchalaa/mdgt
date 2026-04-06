@@ -2,8 +2,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Plus, Edit, Trash2, Search, Package, Info, Loader2, Eye
+  Plus, Edit, Trash2, Search, Package, Info, Loader2, Eye, Download
 } from "lucide-react";
+import { exportToExcel } from "@/lib/exportExcel";
 import { fetchItemMasters, createItemMaster, updateItemMaster, deleteItemMaster, fetchMaterialGroups, fetchMaterialTypes, fetchMaterialAttributes } from "../../../lib/api";
 import {useAuth} from "@/context/AuthContext";
 import BackButton from "@/components/BackButton";
@@ -200,6 +201,22 @@ export default function MaterialsPage() {
   });
 
   const { sortedData: sortedMaterials, requestSort, getSortIcon } = useSortableData(filteredMaterials);
+
+  const handleDownload = () => {
+    const headers = ["SAP Material No.", "SAP Description", "Short Name", "Long Name", "Material Group", "Material Type", "UOM", "Status", "Created"];
+    const rows = sortedMaterials.map(m => [
+      m.sap_item_id || "",
+      m.sap_name || m.sap_description || "",
+      m.short_name || m.item_desc || "",
+      m.long_name || "",
+      m.mgrp_code || "",
+      m.mat_type_code || "",
+      m.uom || "",
+      m.is_final ? "Final" : "Draft",
+      m.created ? new Date(m.created).toLocaleDateString("en-IN") : "",
+    ]);
+    exportToExcel("Materials", headers, rows, "Materials");
+  };
 
   // const role = localStorage.getItem("role");
 
@@ -706,6 +723,16 @@ export default function MaterialsPage() {
               <Trash2 size={14} className="mr-1.5" />
               {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
             </button>
+            {role === "MDGT" && sortedMaterials.length > 0 && (
+              <button
+                onClick={handleDownload}
+                className="flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md"
+                title={`Download ${sortedMaterials.length} materials as Excel`}
+              >
+                <Download size={14} className="mr-1.5" />
+                Download
+              </button>
+            )}
             {checkPermission("item", "create") && (
               <button
                 onClick={handleAddNew}
