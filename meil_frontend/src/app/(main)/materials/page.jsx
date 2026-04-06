@@ -203,18 +203,46 @@ export default function MaterialsPage() {
   const { sortedData: sortedMaterials, requestSort, getSortIcon } = useSortableData(filteredMaterials);
 
   const handleDownload = async () => {
-    const headers = ["SAP Material No.", "SAP Description", "Short Name", "Long Name", "Material Group", "Material Type", "UOM", "Status", "Created"];
-    const rows = sortedMaterials.map(m => [
-      m.sap_item_id || "",
-      m.sap_name || m.sap_description || "",
-      m.short_name || m.item_desc || "",
-      m.long_name || "",
-      m.mgrp_code || "",
-      m.mat_type_code || "",
-      m.uom || "",
-      m.is_final ? "Final" : "Draft",
-      m.created ? new Date(m.created).toLocaleDateString("en-IN") : "",
-    ]);
+    // Collect all unique attribute keys across all materials
+    const attrKeys = [];
+    sortedMaterials.forEach(m => {
+      if (m.attributes && typeof m.attributes === "object") {
+        Object.keys(m.attributes).forEach(k => {
+          if (!attrKeys.includes(k)) attrKeys.push(k);
+        });
+      }
+    });
+
+    // Helper to extract readable attribute value (handles {value, uom} objects)
+    const getAttrValue = (val) => {
+      if (!val && val !== 0) return "";
+      if (typeof val === "object" && val !== null) {
+        const v = val.value ?? "";
+        const u = val.uom ?? "";
+        return u ? `${v} ${u}`.trim() : String(v);
+      }
+      return String(val);
+    };
+
+    const baseHeaders = ["SAP Material No.", "SAP Description", "Short Name", "Long Name", "Material Group", "Material Type", "UOM", "Status", "Created"];
+    const headers = [...baseHeaders, ...attrKeys];
+
+    const rows = sortedMaterials.map(m => {
+      const base = [
+        m.sap_item_id || "",
+        m.sap_name || m.sap_description || "",
+        m.short_name || m.item_desc || "",
+        m.long_name || "",
+        m.mgrp_code || "",
+        m.mat_type_code || "",
+        m.uom || "",
+        m.is_final ? "Final" : "Draft",
+        m.created ? new Date(m.created).toLocaleDateString("en-IN") : "",
+      ];
+      const attrValues = attrKeys.map(k => getAttrValue(m.attributes?.[k]));
+      return [...base, ...attrValues];
+    });
+
     await exportToExcel("Materials", headers, rows, "Materials");
   };
 
