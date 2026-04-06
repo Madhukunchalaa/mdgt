@@ -12,8 +12,12 @@ export default function UploadPage() {
     const [attrMgrpCode, setAttrMgrpCode] = useState("");
     const fileInputRef = useRef(null);
 
-    const templates = ["project", "EmailDomain", "Employee", "MaterialType", "MatgAttributeItem", "Material", "ValidationLists", "SuperGroup", "MatGroup", "ItemMaster", "Company"];
-    const templateLabels = { "MatgAttributeItem": "Material Group Attributes and Values", "ItemMaster": "Upload template for Material, Material Group and Attributes" };
+    const templates = ["project", "EmailDomain", "Employee", "MaterialType", "MatgAttributeItem", "Material", "ValidationLists", "SuperGroup", "MatGroup", "ItemMaster", "ItemMasterOld", "Company"];
+    const templateLabels = {
+        "MatgAttributeItem": "Material Group Attributes and Values",
+        "ItemMaster": "Upload template for Material, Material Group and Attributes",
+        "ItemMasterOld": "Old Version - Item Master (Base Values & Spec Fields)",
+    };
 
     const triggerToast = (type, message) => {
         window.dispatchEvent(new CustomEvent('showToast', {
@@ -28,12 +32,14 @@ export default function UploadPage() {
         }
 
         try {
-            const templateName = selectedTemplate === "ItemMaster" && templateType === "attributes" 
-                ? "ItemMaster Attributes" 
-                : selectedTemplate === "ItemMaster" 
-                    ? "ItemMaster Base Values" 
-                    : selectedTemplate;
-            
+            const templateName = selectedTemplate === "ItemMaster" && templateType === "attributes"
+                ? "ItemMaster Attributes"
+                : selectedTemplate === "ItemMaster"
+                    ? "ItemMaster Base Values"
+                    : selectedTemplate === "ItemMasterOld"
+                        ? "Old Version Item Master"
+                        : selectedTemplate;
+
             triggerToast("success", `Generating ${templateName} template...`);
 
             const mgrpParam = templateType === "attributes" && attrMgrpCode ? `&mgrp_code=${attrMgrpCode.trim().toUpperCase()}` : "";
@@ -63,7 +69,9 @@ export default function UploadPage() {
                 ? "ItemMaster_Attributes_template.xlsx"
                 : selectedTemplate === "ItemMaster"
                     ? "ItemMaster_Base_Values_template.xlsx"
-                    : `${selectedTemplate}_template.xlsx`;
+                    : selectedTemplate === "ItemMasterOld"
+                        ? "ItemMaster_OldVersion_template.xlsx"
+                        : `${selectedTemplate}_template.xlsx`;
             
             link.download = filename;
             document.body.appendChild(link);
@@ -102,7 +110,7 @@ export default function UploadPage() {
         formData.append("file", file);
         formData.append("model", selectedTemplate);
         
-        // For ItemMaster, add phase parameter
+        // For ItemMaster (new version), add phase parameter
         if (selectedTemplate === "ItemMaster") {
             formData.append("phase", selectedPhase);
         }
@@ -128,6 +136,30 @@ export default function UploadPage() {
             console.log("Result : ", result);
             if (!response.ok) {
                 throw new Error(result.error || "Upload failed");
+            }
+
+            if (result.log_file_base64) {
+                try {
+                    const byteCharacters = atob(result.log_file_base64);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = downloadUrl;
+                    link.download = result.log_file_name || `Upload_Log_${selectedTemplate}.xlsx`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(downloadUrl);
+                    triggerToast("success", "Detailed upload log downloaded automatically.");
+                } catch (err) {
+                    console.error("Error downloading log file:", err);
+                }
             }
 
             setUploadProgress(100);
@@ -257,6 +289,22 @@ export default function UploadPage() {
                                         </p>
                                     </div>
                                 </div>
+                            ) : selectedTemplate === "ItemMasterOld" ? (
+                                <div className="mt-auto space-y-2">
+                                    <button
+                                        onClick={() => handleDownload()}
+                                        className="w-full inline-flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-3 rounded-xl shadow hover:bg-indigo-700 transition-colors"
+                                    >
+                                        <Download className="w-5 h-5" />
+                                        Download Old Version Template
+                                    </button>
+                                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                        <p className="text-xs text-amber-800 font-medium mb-1">Old Version Format:</p>
+                                        <p className="text-xs text-amber-700">
+                                            Single sheet with SAP Item ID, Mat Type, Mgrp, Item Desc, Notes, Search Text, Type, MOC, Size, Part Number, Model, Make.
+                                        </p>
+                                    </div>
+                                </div>
                             ) : (
                                 <button
                                     onClick={() => handleDownload()}
@@ -284,7 +332,7 @@ export default function UploadPage() {
                                 {selectedTemplate}. Files should be in .xlsx or .csv format.
                             </p>
                             
-                            {/* Phase Selection for ItemMaster */}
+                            {/* Phase Selection for ItemMaster (new version only) */}
                             {selectedTemplate === "ItemMaster" && (
                                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -577,6 +577,30 @@ export default function MaterialAttributesPage() {
         { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData }
       );
       const data = await res.json();
+      
+      if (data.log_file_base64) {
+        try {
+          const byteCharacters = atob(data.log_file_base64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = downloadUrl;
+          link.download = data.log_file_name || `Upload_Log_Attributes.xlsx`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(downloadUrl);
+        } catch (err) {
+          console.error("Error downloading log file:", err);
+        }
+      }
+
       setUploadResult(data);
       if ((data.inserted > 0) || (data.updated > 0)) await loadAttributes();
     } catch (err) {

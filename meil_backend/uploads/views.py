@@ -1,6 +1,8 @@
 from django.shortcuts import render
 import csv
 import json
+import base64
+import io
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from django.apps import apps
@@ -23,6 +25,7 @@ def get_model_by_name(model_name):
         "matgattribute": "matgattributeitem",
         "materialattribute": "matgattributeitem",
         "matgattributeitem": "matgattributeitem",
+        "itemmasterold": "itemmaster",
     }
     
     # Check if we have a mapping
@@ -75,6 +78,63 @@ def convert_value(field, value):
 
     except Exception:
         return value  # safe fallback
+
+
+# -------------------------------------------------------------------
+# Generate Upload Log (Excel with Status & Error)
+# -------------------------------------------------------------------
+def generate_upload_log(original_data, results, model_name):
+    """
+    original_data: List of dicts (the original upload)
+    results: List of dicts matching original_data length with {'status': 'Success'|'Error', 'error': 'msg'}
+    """
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Upload Results"
+
+    if not original_data:
+        ws.cell(row=1, column=1, value="No data uploaded")
+        return wb
+
+    # Get all unique headers from original data
+    headers = []
+    for row in original_data:
+        for k in row.keys():
+            if k not in headers:
+                headers.append(k)
+    
+    # Add status columns at the beginning
+    all_headers = ["Upload Status", "Error Details"] + headers
+
+    # Header styling
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+
+    for col_idx, header in enumerate(all_headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = 20
+
+    # Write data rows
+    for row_idx, (orig_row, res) in enumerate(zip(original_data, results), start=2):
+        # Status column
+        status = res.get('status', 'Unknown')
+        status_cell = ws.cell(row=row_idx, column=1, value=status)
+        if status == "Success":
+            status_cell.font = Font(color="008000") # Green
+        elif status == "Error":
+            status_cell.font = Font(color="FF0000") # Red
+
+        # Error details column
+        ws.cell(row=row_idx, column=2, value=res.get('error', ''))
+
+        # Original data columns
+        for col_idx, header in enumerate(headers, start=3):
+            ws.cell(row=row_idx, column=col_idx, value=orig_row.get(header, ""))
+
+    return wb
 
 
 # -------------------------------------------------------------------
@@ -208,11 +268,24 @@ def handle_itemmaster_phase_1(data, request):
     if new_objs:
         ItemMaster.objects.bulk_create(new_objs, ignore_conflicts=True)
 
-    return JsonResponse({
+    # Populate final row_results (simplified for bulk_create)
+    # Since bulk_create with ignore_conflicts=True is used, we assume all valid-looking rows were "Success" 
+    # unless they hit a hard error caught in the loop.
+    row_results = []
+    errors_dict = {e['row']: e['error'] for e in errors}
+    for i in range(len(data)):
+        row_num = i + 2
+        if row_num in errors_dict:
+            row_results.append({'status': 'Error', 'error': errors_dict[row_num]})
+        else:
+            row_results.append({'status': 'Success', 'error': ''})
+
+    return {
         "message": "ItemMaster Phase 1 upload complete",
         "inserted": len(objs),
         "errors": errors,
-    })
+        "row_results": row_results
+    }
 
 
 # -------------------------------------------------------------------
@@ -358,13 +431,24 @@ def handle_itemmaster_phase_2(data, request):
             except Exception as e:
                 errors.append({"row": idx, "error": str(e)})
 
-        return JsonResponse({
+        # Row results for wide format
+        row_results = []
+        errors_dict = {e['row']: e['error'] for e in errors}
+        for i in range(len(data)):
+            row_num = i + 2
+            if row_num in errors_dict:
+                row_results.append({'status': 'Error', 'error': errors_dict[row_num]})
+            else:
+                row_results.append({'status': 'Success', 'error': ''})
+
+        return {
             "message": "ItemMaster Phase 2 attribute merge complete",
             "created": created,
             "updated": updated,
             "unchanged": unchanged,
             "errors": errors,
-        })
+            "row_results": row_results
+        }
 
     # --- Legacy vertical format below ---
     for idx, row in enumerate(data, start=2):  # start=2 because row 1 is header
@@ -467,13 +551,24 @@ def handle_itemmaster_phase_2(data, request):
             import traceback
             errors.append({"row": idx, "error": f"{str(e)}"})
 
-    return JsonResponse({
+    # Row results for legacy vertical format
+    row_results = []
+    errors_dict = {e['row']: e['error'] for e in errors}
+    for i in range(len(data)):
+        row_num = i + 2
+        if row_num in errors_dict:
+            row_results.append({'status': 'Error', 'error': errors_dict[row_num]})
+        else:
+            row_results.append({'status': 'Success', 'error': ''})
+
+    return {
         "message": "ItemMaster Phase 2 attribute merge complete",
         "created": created,
         "updated": updated,
         "unchanged": unchanged,
         "errors": errors,
-    })
+        "row_results": row_results
+    }
 
 
 # -------------------------------------------------------------------
@@ -596,11 +691,22 @@ def handle_generic_model_upload(data, request, Model, model_name):
                 "errors": errors
             }, status=400)
     
-    return JsonResponse({
+    # Populate final row_results
+    row_results = []
+    errors_dict = {e['row']: e.get('error', 'Error') for e in errors}
+    for i in range(len(data)):
+        row_num = i + 2
+        if row_num in errors_dict:
+            row_results.append({'status': 'Error', 'error': errors_dict[row_num]})
+        else:
+            row_results.append({'status': 'Success', 'error': ''})
+
+    return {
         "message": f"{model_name} upload complete",
         "inserted": len(objs),
         "errors": errors,
-    })
+        "row_results": row_results
+    }
 
 
 # -------------------------------------------------------------------
@@ -686,12 +792,23 @@ def handle_matgattribute_phase_1(data, request):
         except Exception as e:
             errors.append({"row": idx, "error": f"{str(e)}"})
 
-    return JsonResponse({
+    # Populate final row_results
+    row_results = []
+    errors_dict = {e['row']: e['error'] for e in errors}
+    for i in range(len(data)):
+        row_num = i + 2
+        if row_num in errors_dict:
+            row_results.append({'status': 'Error', 'error': errors_dict[row_num]})
+        else:
+            row_results.append({'status': 'Success', 'error': ''})
+
+    return {
         "message": "MatGroup Attribute Definitions imported",
         "inserted": inserted,
         "updated": updated,
         "errors": errors,
-    })
+        "row_results": row_results
+    }
 
 
 # -------------------------------------------------------------------
@@ -796,11 +913,22 @@ def handle_matgroup_upload(data, request):
     if objs:
         MatGroup.objects.bulk_create(objs, ignore_conflicts=True)
 
-    return JsonResponse({
+    # Populate final row_results
+    row_results = []
+    errors_dict = {e['row']: e['error'] for e in errors}
+    for i in range(len(data)):
+        row_num = i + 2
+        if row_num in errors_dict:
+            row_results.append({'status': 'Error', 'error': errors_dict[row_num]})
+        else:
+            row_results.append({'status': 'Success', 'error': ''})
+
+    return {
         "message": "MatGroup upload complete",
         "inserted": len(objs),
         "errors": errors,
-    })
+        "row_results": row_results
+    }
 
 
 # MAIN BULK UPLOAD FUNCTION WITH PHASE ROUTING
@@ -890,23 +1018,70 @@ def bulk_upload(request):
     # -------------------------------------------------------------------
     model_name_lower = model_name.lower()
     
-    if model_name_lower in ("itemmaster", "material"):
+    results_payload = {}
+    row_results = [] # To be populated by handlers: [{'status': 'Success', 'error': ''}, ...]
+
+    if model_name_lower == "itemmasterold":
+        results_payload = handle_itemmaster_old_upload(data, request)
+    elif model_name_lower in ("itemmaster", "material"):
         if phase == "1":
-            return handle_itemmaster_phase_1(data, request)
-        if phase == "2":
-            return handle_itemmaster_phase_2(data, request)
-        return JsonResponse({"error": f"Invalid phase '{phase}' for ItemMaster. Use phase=1 or phase=2"}, status=400)
-
-    if model_name_lower == "matgattributeitem" or model_name == "MatgAttributeItem":
+            results_payload = handle_itemmaster_phase_1(data, request)
+        elif phase == "2":
+            results_payload = handle_itemmaster_phase_2(data, request)
+        else:
+            return JsonResponse({"error": f"Invalid phase '{phase}' for ItemMaster. Use phase=1 or phase=2"}, status=400)
+    elif model_name_lower == "matgattributeitem" or model_name == "MatgAttributeItem":
         if phase == "1":
-            return handle_matgattribute_phase_1(data, request)
-        return JsonResponse({"error": f"Invalid phase '{phase}' for MatgAttributeItem"}, status=400)
+            results_payload = handle_matgattribute_phase_1(data, request)
+        else:
+            return JsonResponse({"error": f"Invalid phase '{phase}' for MatgAttributeItem"}, status=400)
+    elif model_name_lower == "matgroup":
+        results_payload = handle_matgroup_upload(data, request)
+    else:
+        # Generic handler for all other models
+        results_payload = handle_generic_model_upload(data, request, Model, model_name)
 
-    if model_name_lower == "matgroup":
-        return handle_matgroup_upload(data, request)
+    # If the response is a JsonResponse (from handlers that haven't been refactored yet), 
+    # extract the data if it contains detailed results.
+    # New handlers should return a dict instead of JsonResponse internally.
+    if isinstance(results_payload, JsonResponse):
+        # Fallback for handlers not yet modified to support the new logging structure
+        response_data = json.loads(results_payload.content.decode('utf-8'))
+        row_results = response_data.get("row_results", [])
+        if not row_results:
+            # Generate dummy results from errors list if detailed row_results missing
+            errors_map = {e.get('row'): e.get('error') for e in response_data.get('errors', [])}
+            for i in range(len(data)):
+                row_num = i + 2
+                if row_num in errors_map:
+                    row_results.append({'status': 'Error', 'error': errors_map[row_num]})
+                else:
+                    row_results.append({'status': 'Success', 'error': ''})
+    else:
+        # Expected structure from refactored handlers
+        row_results = results_payload.get("row_results", [])
+        response_data = results_payload
 
-    # Generic handler for all other models
-    return handle_generic_model_upload(data, request, Model, model_name)
+    # -------------------------------------------------------------------
+    # Generate and Attach Log File if row_results exist
+    # -------------------------------------------------------------------
+    if row_results:
+        try:
+            wb = generate_upload_log(data, row_results, model_name)
+            output = io.BytesIO()
+            wb.save(output)
+            output.seek(0)
+            log_base64 = base64.b64encode(output.read()).decode('utf-8')
+            response_data["log_file_base64"] = log_base64
+            response_data["log_file_name"] = f"Upload_Log_{model_name}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        except Exception as e:
+            print(f"Log generation failed: {str(e)}")
+
+    if isinstance(results_payload, JsonResponse):
+        # We need to rebuild the JsonResponse with the added log file
+        return JsonResponse(response_data, status=results_payload.status_code)
+    
+    return JsonResponse(response_data)
 
 
 def get_model_fields(request):
@@ -977,6 +1152,171 @@ def generate_itemmaster_base_template(Model):
     response['Content-Disposition'] = 'attachment; filename="Material_Upload_Template.xlsx"'
     wb.save(response)
     return response
+
+
+# -------------------------------------------------------------------
+# Generate ItemMaster Old Version Template (single combined sheet)
+# -------------------------------------------------------------------
+def generate_itemmaster_old_template():
+    """Old-version single-sheet template: base fields + spec fields in one sheet."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Material Old Version"
+
+    columns = [
+        ("SAP Item ID",   "sap_item_id",   15),
+        ("Mat Type Code", "mat_type_code", 15),
+        ("Mgrp Code",     "mgrp_code",     15),
+        ("Item Desc",     "short_name",    30),
+        ("Notes",         "long_name",     35),
+        ("Search Text",   "search_text",   30),
+        ("Type",          "item_type",     15),
+        ("Number",        "item_number",   15),
+        ("MOC",           "moc",           15),
+        ("Size",          "item_size",     15),
+        ("Part Number",   "part_number",   18),
+        ("Model",         "model",         18),
+        ("Make",          "make",          18),
+    ]
+
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+
+    for col_idx, (header, _, width) in enumerate(columns, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
+
+    sample_data = [
+        {
+            "sap_item_id": "12345", "mat_type_code": "ROH", "mgrp_code": "PIPES",
+            "short_name": "SS PIPE SCH40 2\"", "long_name": "Stainless Steel Pipe SCH40 2 inch",
+            "search_text": "pipe ss sch40", "item_type": "Seamless", "item_number": "P-001",
+            "moc": "SS316", "item_size": "2 inch", "part_number": "", "model": "", "make": "Jindal",
+        },
+        {
+            "sap_item_id": "12346", "mat_type_code": "ROH", "mgrp_code": "VALVES",
+            "short_name": "CS GATE VALVE 1\"", "long_name": "Carbon Steel Gate Valve 1 inch",
+            "search_text": "valve gate cs", "item_type": "Gate", "item_number": "V-002",
+            "moc": "CS", "item_size": "1 inch", "part_number": "GV-001", "model": "GV100", "make": "L&T",
+        },
+    ]
+
+    for row_idx, sample_row in enumerate(sample_data, start=2):
+        for col_idx, (_, field_key, _) in enumerate(columns, start=1):
+            ws.cell(row=row_idx, column=col_idx, value=sample_row.get(field_key, ""))
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="ItemMaster_OldVersion_template.xlsx"'
+    wb.save(response)
+    return response
+
+
+# -------------------------------------------------------------------
+# Handler: ItemMaster Old Version Upload (single combined sheet)
+# -------------------------------------------------------------------
+def handle_itemmaster_old_upload(data, request):
+    from itemmaster.models import ItemMaster
+    from MaterialType.models import MaterialType
+    from matgroups.models import MatGroup
+
+    def get_value(row, keys):
+        for k in keys:
+            if k in row and str(row[k]).strip():
+                return str(row[k]).strip()
+        return None
+
+    now = timezone.now()
+    objs = []
+    errors = []
+
+    for idx, row in enumerate(data, start=2):
+        try:
+            sap_item_id_raw = get_value(row, ["SAP Item ID", "sap_item_id", "Sap Item Id", "SAP ITEM ID"])
+            sap_item_id = int(sap_item_id_raw) if sap_item_id_raw and sap_item_id_raw.isdigit() else None
+
+            mat_type_code_val = get_value(row, ["Mat Type Code", "mat_type_code", "MAT TYPE CODE"])
+            mgrp_code_val = get_value(row, ["Mgrp Code", "mgrp_code", "MGRP CODE"])
+
+            if not mat_type_code_val or not mgrp_code_val:
+                errors.append({"row": idx, "error": "Mat Type Code and Mgrp Code are required"})
+                continue
+
+            mat_type_obj = MaterialType.objects.filter(mat_type_code=mat_type_code_val.upper()).first()
+            mgrp_obj = MatGroup.objects.filter(mgrp_code=mgrp_code_val.upper()).first()
+
+            if not mat_type_obj:
+                errors.append({"row": idx, "error": f"MaterialType '{mat_type_code_val}' not found"})
+                continue
+            if not mgrp_obj:
+                errors.append({"row": idx, "error": f"MatGroup '{mgrp_code_val}' not found"})
+                continue
+
+            short_name = get_value(row, ["Item Desc", "item_desc", "Short Name", "short_name"]) or ""
+            long_name = get_value(row, ["Notes", "notes", "Long Name", "long_name"]) or ""
+            search_text = get_value(row, ["Search Text", "search_text"]) or ""
+            item_type = get_value(row, ["Type", "item_type"])
+            item_number = get_value(row, ["Number", "item_number"])
+            moc = get_value(row, ["MOC", "moc"])
+            item_size = get_value(row, ["Size", "item_size"])
+            part_number = get_value(row, ["Part Number", "part_number"])
+            model = get_value(row, ["Model", "model"])
+            make = get_value(row, ["Make", "make"])
+
+            fields = dict(
+                mat_type_code=mat_type_obj,
+                mgrp_code=mgrp_obj,
+                short_name=short_name,
+                long_name=long_name,
+                search_text=search_text,
+                item_type=item_type,
+                item_number=item_number,
+                moc=moc,
+                item_size=item_size,
+                part_number=part_number,
+                model=model,
+                make=make,
+                updated=now,
+            )
+
+            if sap_item_id:
+                existing = ItemMaster.objects.filter(sap_item_id=sap_item_id).first()
+                if existing:
+                    for k, v in fields.items():
+                        setattr(existing, k, v)
+                    existing.save()
+                    objs.append(existing)
+                    continue
+
+            objs.append(ItemMaster(sap_item_id=sap_item_id, created=now, **fields))
+
+        except Exception as e:
+            errors.append({"row": idx, "error": str(e)})
+
+    new_objs = [o for o in objs if not o.pk]
+    if new_objs:
+        ItemMaster.objects.bulk_create(new_objs, ignore_conflicts=True)
+
+    # Populate final row_results
+    row_results = []
+    errors_dict = {e['row']: e['error'] for e in errors}
+    for i in range(len(data)):
+        row_num = i + 2
+        if row_num in errors_dict:
+            row_results.append({'status': 'Error', 'error': errors_dict[row_num]})
+        else:
+            row_results.append({'status': 'Success', 'error': ''})
+
+    return {
+        "message": "ItemMaster Old Version upload complete",
+        "inserted": len(objs),
+        "errors": errors,
+        "row_results": row_results
+    }
 
 
 # -------------------------------------------------------------------
@@ -1179,6 +1519,10 @@ def generate_excel_template(request):
         except:
             return JsonResponse({"error": f"Invalid model: {model_name}"}, status=400)
     
+    # Old Version (single combined sheet)
+    if model_name.lower() == "itemmasterold":
+        return generate_itemmaster_old_template()
+
     # For ItemMaster or Material, handle separate downloads
     if model_name.lower() in ("itemmaster", "material"):
         from itemmaster.models import ItemMaster
