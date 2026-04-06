@@ -634,32 +634,42 @@ export default function MaterialDetailPage() {
                         { label: "Make", key: "make" },
                       ].filter(f => itemDetails.item[f.key]);
 
-                      const attrEntries = itemDetails.item.attributes && Object.keys(itemDetails.item.attributes).length > 0
-                        ? Object.entries(itemDetails.item.attributes)
-                        : [];
+                      // Use group attribute definitions as primary source; fall back to keys in stored values
+                      const storedAttrs = itemDetails.item.attributes && typeof itemDetails.item.attributes === "object"
+                        ? itemDetails.item.attributes
+                        : {};
+                      const attrDefs = Array.isArray(itemDetails.attributes) ? itemDetails.attributes : [];
+                      // Build display rows: prefer definitions order, then any extra keys in storedAttrs
+                      const defKeys = attrDefs.map(d => d.attrib_name);
+                      const extraKeys = Object.keys(storedAttrs).filter(k => !defKeys.includes(k));
+                      const allAttrKeys = [...defKeys, ...extraKeys];
 
-                      const hasData = specFields.length > 0 || attrEntries.length > 0;
+                      const hasData = specFields.length > 0 || allAttrKeys.length > 0;
 
                       return hasData ? (
                         <div className="bg-gray-50">
                           <table className="w-full">
                             <tbody>
                               {specFields.map((f, index) => (
-                                <tr key={f.key} className={index !== specFields.length - 1 || attrEntries.length > 0 ? "border-b border-gray-200" : ""}>
+                                <tr key={f.key} className={index !== specFields.length - 1 || allAttrKeys.length > 0 ? "border-b border-gray-200" : ""}>
                                   <td className="px-2 py-1.5 text-xs font-medium text-gray-700">{f.label}</td>
                                   <td className="px-2 py-1.5 text-xs text-gray-700 font-medium text-right bg-white">{itemDetails.item[f.key]}</td>
                                 </tr>
                               ))}
-                              {attrEntries.map(([key, value], index) => {
-                                const attrDef = itemDetails.attributes?.find(attr => attr.attrib_name === key);
-                                const displayVal = typeof value === "object" && value !== null
-                                  ? (value.value ?? "-")
-                                  : (value || "-");
-                                const displayUom = typeof value === "object" && value !== null
-                                  ? (value.uom || attrDef?.unit || "")
+                              {allAttrKeys.map((key, index) => {
+                                const attrDef = attrDefs.find(attr => attr.attrib_name === key);
+                                const rawVal = storedAttrs[key];
+                                const displayVal = rawVal === undefined || rawVal === null || rawVal === ""
+                                  ? "-"
+                                  : typeof rawVal === "object"
+                                    ? (rawVal.value !== undefined ? String(rawVal.value) : "-")
+                                    : String(rawVal);
+                                const rawUom = typeof rawVal === "object" && rawVal !== null
+                                  ? (rawVal.uom || attrDef?.unit || "")
                                   : (attrDef?.unit || "");
+                                const displayUom = ["NOS", "NOC"].includes(rawUom.trim().toUpperCase()) ? "" : rawUom;
                                 return (
-                                  <tr key={key} className={index !== attrEntries.length - 1 ? "border-b border-gray-200" : ""}>
+                                  <tr key={key} className={index !== allAttrKeys.length - 1 ? "border-b border-gray-200" : ""}>
                                     <td className="px-2 py-1.5 text-xs font-medium text-gray-700">
                                       {key}
                                       {displayUom && <span className="ml-1.5 text-xs text-gray-500">({displayUom})</span>}
@@ -673,7 +683,7 @@ export default function MaterialDetailPage() {
                         </div>
                       ) : (
                         <div className="bg-gray-50 p-2 text-xs text-gray-500 text-center">
-                          No attributes defined for this item
+                          No attributes defined for this material group
                         </div>
                       );
                     })()}

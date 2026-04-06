@@ -1683,11 +1683,12 @@ export default function MaterialsPage() {
                             {Object.entries(viewingMaterial.attributes).map(([key, val]) => {
                               const value = typeof val === "object" ? val?.value : val;
                               const uom = typeof val === "object" ? val?.uom : "";
+                              const displayUom = ["NOS", "NOC"].includes(String(uom || "").trim().toUpperCase()) ? "" : uom;
                               return (
                                 <div key={key} className="grid grid-cols-12 gap-2 px-3 py-2.5 hover:bg-gray-50 transition-colors">
                                   <div className="col-span-4"><span className="text-sm font-medium text-gray-900">{key}</span></div>
                                   <div className="col-span-6"><span className="text-sm text-gray-700">{value || "-"}</span></div>
-                                  <div className="col-span-2"><span className="text-sm text-gray-600">{uom || "-"}</span></div>
+                                  <div className="col-span-2"><span className="text-sm text-gray-600">{displayUom || "-"}</span></div>
                                 </div>
                               );
                             })}
@@ -1737,7 +1738,7 @@ export default function MaterialsPage() {
                               }
                             }
 
-                            const showUOM = hasUOMInValue ? displayUOM : "-";
+                            const showUOM = (hasUOMInValue && !["NOS", "NOC"].includes(String(displayUOM || "").trim().toUpperCase())) ? displayUOM : "-";
                             
                             return (
                               <div key={attrName} className="grid grid-cols-12 gap-2 px-3 py-2.5 hover:bg-gray-50 transition-colors">
