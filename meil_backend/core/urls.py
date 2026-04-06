@@ -17,14 +17,33 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
+from Common.Middleware import authenticate
 
 
 def health(request):
     return JsonResponse({"status": "ok"})
 
 
+@authenticate
+def dashboard_stats(request):
+    from itemmaster.models import ItemMaster
+    from matgroups.models import MatGroup
+    from Employee.models import Employee
+
+    total_materials = ItemMaster.objects.filter(is_deleted=False).count()
+    material_groups = MatGroup.objects.filter(is_deleted=False).count()
+    active_users = Employee.objects.filter(is_deleted=False).count()
+
+    return JsonResponse({
+        "total_materials": total_materials,
+        "material_groups": material_groups,
+        "active_users": active_users,
+    })
+
+
 urlpatterns = [
     path('health/', health),
+    path('stats/', dashboard_stats),
     path('admin/', admin.site.urls),
     path('employee/', include('Employee.urls')),
     path('company/', include('Company.urls')),

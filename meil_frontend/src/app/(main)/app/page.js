@@ -14,13 +14,27 @@ export default function Home() {
   const [newGroupComment, setNewGroupComment] = useState("");
   // const [userName, setUserName] = useState("");
   const [activeTab, setActiveTab] = useState("materials");
+  const [stats, setStats] = useState([
+    { label: "Total Materials", value: "...", icon: Package, change: "" },
+    { label: "Material Groups", value: "...", icon: BarChart3, change: "" },
+    { label: "Active Users", value: "...", icon: Users, change: "" },
+  ]);
 
-  // useEffect(() => {
-  //   if (typeof window !== "undefined") {
-  //     const name = localStorage.getItem("userName") || "User";
-  //     setUserName(name);
-  //   }
-  // }, []);
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/stats/`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setStats([
+          { label: "Total Materials", value: data.total_materials?.toLocaleString() ?? "—", icon: Package, change: "" },
+          { label: "Material Groups", value: data.material_groups?.toLocaleString() ?? "—", icon: BarChart3, change: "" },
+          { label: "Active Users", value: data.active_users?.toLocaleString() ?? "—", icon: Users, change: "" },
+        ]);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleLogout = () => {
     // if (typeof window !== "undefined") {
@@ -43,12 +57,6 @@ export default function Home() {
     { id: "GRP001", name: "Fasteners", description: "Nuts, bolts, screws and washers", relevance: 92 },
     { id: "GRP005", name: "Metal Components", description: "Various metal parts and components", relevance: 85 },
     { id: "GRP008", name: "Construction Hardware", description: "Hardware for construction purposes", relevance: 76 },
-  ];
-
-  const stats = [
-    { label: "Total Materials", value: "1,248", icon: Package, change: "+12% this month" },
-    { label: "Material Groups", value: "42", icon: BarChart3, change: "+3 new groups" },
-    { label: "Active Users", value: "86", icon: Users, change: "+5 this week" },
   ];
 
   const handleSearchByNumber = () => {
