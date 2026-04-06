@@ -1,4 +1,6 @@
 import json
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
@@ -304,11 +306,58 @@ def list_itemmasters(request):
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
+    # 1. READ PARAMS
     include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
-    items = ItemMaster.objects.filter(is_deleted=True) if include_deleted else ItemMaster.objects.filter(is_deleted=False)
-    response_data = []
+    search_query = request.GET.get('search', '').strip()
+    mgrp_code = request.GET.get('mgrp_code', '').strip()
+    mat_type_code = request.GET.get('mat_type_code', '').strip()
+    is_final_raw = request.GET.get('is_final') # 'true' or 'false'
+    page = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 25)
 
-    for item in items:
+    # 2. FILTERING
+    items_qs = ItemMaster.objects.filter(is_deleted=include_deleted)
+
+    if search_query:
+        search_filter = Q(sap_name__icontains=search_query) | \
+                        Q(short_name__icontains=search_query) | \
+                        Q(long_name__icontains=search_query) | \
+                        Q(search_text__icontains=search_query)
+        if search_query.isdigit():
+            search_filter |= Q(sap_item_id__icontains=search_query)
+        items_qs = items_qs.filter(search_filter)
+
+    if mgrp_code and mgrp_code.lower() != 'all':
+        items_qs = items_qs.filter(mgrp_code__mgrp_code=mgrp_code)
+
+    if mat_type_code and mat_type_code.lower() != 'all':
+        items_qs = items_qs.filter(mat_type_code__mat_type_code=mat_type_code)
+
+    if is_final_raw is not None:
+        items_qs = items_qs.filter(is_final=(is_final_raw.lower() == 'true'))
+
+    # Order results - consistent ordering is required for pagination
+    items_qs = items_qs.select_related('mat_type_code', 'mgrp_code', 'createdby', 'updatedby').only(
+        'local_item_id', 'sap_item_id', 'sap_name', 'short_name', 'long_name',
+        'mgrp_long_name', 'search_text', 'uom', 'attributes', 'is_final',
+        'is_deleted', 'created', 'updated',
+        'mat_type_code__mat_type_code',
+        'mgrp_code__mgrp_code',
+        'createdby__emp_name',
+        'updatedby__emp_name',
+    ).order_by('-created') # Most recent first
+
+    # 3. PAGINATION
+    paginator = Paginator(items_qs, page_size)
+    try:
+        items_page = paginator.page(page)
+    except PageNotAnInteger:
+        items_page = paginator.page(1)
+    except EmptyPage:
+        items_page = paginator.page(paginator.num_pages)
+
+    response_data = []
+    for item in items_page:
         # Compute long_name on-the-fly if not stored
         long_name = item.long_name or format_long_name(
             item.sap_name,
@@ -339,7 +388,13 @@ def list_itemmasters(request):
             "updatedby": get_employee_name(item.updatedby)
         })
 
-    return JsonResponse(response_data, safe=False, status=200)
+    return JsonResponse({
+        "count": paginator.count,
+        "total_pages": paginator.num_pages,
+        "current_page": items_page.number,
+        "page_size": int(page_size),
+        "results": response_data
+    }, safe=False, status=200)
 
 
 

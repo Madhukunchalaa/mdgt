@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Plus, Edit, Trash2, Search, Package, Info, Loader2, Eye, Download
+  Plus, Edit, Trash2, Search, Package, Info, Loader2, Eye, Download, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { exportToExcel } from "@/lib/exportExcel";
 import { fetchItemMasters, createItemMaster, updateItemMaster, deleteItemMaster, fetchMaterialGroups, fetchMaterialTypes, fetchMaterialAttributes } from "../../../lib/api";
@@ -36,6 +36,17 @@ export default function MaterialsPage() {
   const [duplicateMaterials, setDuplicateMaterials] = useState(null); // Store duplicate materials info
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    count: 0,
+    totalPages: 1,
+    currentPage: 1,
+    pageSize: 25
+  });
+  
+  // Search debounce state
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  
   const [formData, setFormData] = useState({
     sap_item_id: "",
     sap_name: "",
@@ -50,18 +61,35 @@ export default function MaterialsPage() {
     is_final: false,
   });
   const {user,token,role,checkPermission} = useAuth();
-  // Load materials on component mount
   useEffect(() => {
     if (token) {
-      loadMaterials();
       loadMaterialGroups();
       loadMaterialTypes();
     }
   }, [token]);
 
+  // Debounce search term
   useEffect(() => {
-    if (token) loadMaterials();
-  }, [showDeleted]);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Load materials when filters, search, or page changes
+  useEffect(() => {
+    if (token) {
+      loadMaterials(1); // Reset to page 1 on filter/search change
+    }
+  }, [token, showDeleted, debouncedSearchTerm, filterGroup, filterType, tableTab]);
+
+  // Load materials when page changes
+  useEffect(() => {
+    if (token && pagination.currentPage > 0) {
+      // Avoid reloading if it's the same request as above (page reset to 1)
+      // This is handled by loadMaterials if we call it carefully
+    }
+  }, [pagination.currentPage]);
 
   // Load attributes when switching to attributes tab if material group is selected
   useEffect(() => {
@@ -71,12 +99,27 @@ export default function MaterialsPage() {
   }, [activeTab, formData.mgrp_code]);
 
 
-  const loadMaterials = async () => {
+  const loadMaterials = async (page = pagination.currentPage) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchItemMasters(token, showDeleted);
-      setMaterials(data);
+      const data = await fetchItemMasters(token, {
+        includeDeleted: showDeleted,
+        search: debouncedSearchTerm,
+        mgrp_code: filterGroup,
+        mat_type_code: filterType,
+        is_final: tableTab === "cleaned",
+        page: page,
+        page_size: pagination.pageSize
+      });
+      
+      setMaterials(data.results || []);
+      setPagination(prev => ({
+        ...prev,
+        count: data.count || 0,
+        totalPages: data.total_pages || 1,
+        currentPage: data.current_page || 1,
+      }));
     } catch (err) {
       setError("Failed to load materials: " + (err.response?.data?.error || err.message));
     } finally {
@@ -167,40 +210,12 @@ export default function MaterialsPage() {
     }
   };
 
-  // Get unique groups and types
-  const groups = ["all", ...new Set(materials.map(m => m.mgrp_code))];
-  const types = ["all", ...new Set(materials.map(m => m.mat_type_code))];
+  // Get unique groups and types (can still be derived from the full list or separate APIs)
+  const groups = ["all", ...new Set(materialGroups.map(m => m.mgrp_code))];
+  const types = ["all", ...new Set(materialTypes.map(m => m.mat_type_code))];
 
-  // Filter materials
-  const safe = (v) => (v ? String(v).toLowerCase() : "");
-
-  const filteredMaterials = materials.filter(material => {
-    const search = searchTerm.toLowerCase();
-  
-    const matchesSearch =
-      safe(material.item_desc).includes(search) ||
-      safe(material.short_name).includes(search) ||
-      safe(material.sap_item_id).includes(search) ||
-      safe(material.sap_name).includes(search) ||
-      safe(material.sap_description).includes(search) ||
-      safe(material.long_name).includes(search) ||
-      safe(material.mgrp_code).includes(search) ||
-      safe(material.search_text).includes(search);
-  
-    const matchesGroup =
-      filterGroup === "all" || material.mgrp_code === filterGroup;
-  
-    const matchesType =
-      filterType === "all" || material.mat_type_code === filterType;
-  
-    // Filter by is_final based on active tab
-    const matchesFinalStatus =
-      tableTab === "raw" ? !material.is_final : !!material.is_final;
-  
-    return matchesSearch && matchesGroup && matchesType && matchesFinalStatus;
-  });
-
-  const { sortedData: sortedMaterials, requestSort, getSortIcon } = useSortableData(filteredMaterials, 'sap_item_id');
+  // Since filtering is server-side, we just use the materials directly
+  const { sortedData: sortedMaterials, requestSort, getSortIcon } = useSortableData(materials, 'sap_item_id');
 
   const handleDownload = async () => {
     // Collect all unique attribute keys across all materials
@@ -966,6 +981,59 @@ export default function MaterialsPage() {
                   </tbody>
                 </table>
               )}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+              <div className="flex flex-1 justify-between sm:hidden">
+                <button
+                  onClick={() => loadMaterials(pagination.currentPage - 1)}
+                  disabled={pagination.currentPage === 1}
+                  className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => loadMaterials(pagination.currentPage + 1)}
+                  disabled={pagination.currentPage === pagination.totalPages}
+                  className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{(pagination.currentPage - 1) * pagination.pageSize + 1}</span> to <span className="font-medium">{Math.min(pagination.currentPage * pagination.pageSize, pagination.count)}</span> of{' '}
+                    <span className="font-medium">{pagination.count}</span> results
+                  </p>
+                </div>
+                <div>
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <button
+                      onClick={() => loadMaterials(pagination.currentPage - 1)}
+                      disabled={pagination.currentPage === 1}
+                      className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                    >
+                      <span className="sr-only">Previous</span>
+                      <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:outline-offset-0">
+                      Page {pagination.currentPage} of {pagination.totalPages}
+                    </span>
+                    <button
+                      onClick={() => loadMaterials(pagination.currentPage + 1)}
+                      disabled={pagination.currentPage === pagination.totalPages}
+                      className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                    >
+                      <span className="sr-only">Next</span>
+                      <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  </nav>
+                </div>
+              </div>
             </div>
           )}
         </div>

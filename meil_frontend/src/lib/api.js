@@ -226,10 +226,22 @@ export const assignMaterialGroup = (token, request_id, material_group) => {
 };
 
 // Item Master API
-export const fetchItemMasters = (token, includeDeleted = false) => {
+export const fetchItemMasters = (token, options = {}) => {
     const axiosInstance = createAxiosInstance(token);
-    const url = includeDeleted ? "itemmaster/list/?include_deleted=true" : "itemmaster/list/";
-    return axiosInstance.get(url).then(res => res.data);
+    
+    // Support backward compatibility where second arg was boolean includeDeleted
+    const params = typeof options === 'boolean' ? { includeDeleted: options } : options;
+    
+    const queryParams = new URLSearchParams();
+    if (params.includeDeleted) queryParams.append('include_deleted', 'true');
+    if (params.search) queryParams.append('search', params.search);
+    if (params.mgrp_code && params.mgrp_code !== 'all') queryParams.append('mgrp_code', params.mgrp_code || '');
+    if (params.mat_type_code && params.mat_type_code !== 'all') queryParams.append('mat_type_code', params.mat_type_code || '');
+    if (params.is_final !== undefined) queryParams.append('is_final', params.is_final);
+    if (params.page) queryParams.append('page', params.page);
+    if (params.page_size) queryParams.append('page_size', params.page_size || 25);
+
+    return axiosInstance.get(`itemmaster/list/?${queryParams.toString()}`).then(res => res.data);
 };
 
 export const createItemMaster = async (token, data) => {
