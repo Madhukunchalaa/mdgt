@@ -200,7 +200,7 @@ export default function MaterialsPage() {
     return matchesSearch && matchesGroup && matchesType && matchesFinalStatus;
   });
 
-  const { sortedData: sortedMaterials, requestSort, getSortIcon } = useSortableData(filteredMaterials);
+  const { sortedData: sortedMaterials, requestSort, getSortIcon } = useSortableData(filteredMaterials, 'sap_item_id');
 
   const handleDownload = async () => {
     // Collect all unique attribute keys across all materials
