@@ -47,6 +47,7 @@ export default function MaterialSearchPage() {
   const [superGroupsLoading, setSuperGroupsLoading] = useState(false);
   const [selectedDrillDownGroup, setSelectedDrillDownGroup] = useState("");
   const [materialGroupSearchTerm, setMaterialGroupSearchTerm] = useState("");
+  const [superGroupSearchTerm, setSuperGroupSearchTerm] = useState("");
 
   // Material group search states
   const [materialGroupCode, setMaterialGroupCode] = useState("");
@@ -122,6 +123,7 @@ export default function MaterialSearchPage() {
       setSelectedSuperGroup("");
       setMaterialGroupsBySuper([]);
       setSelectedDrillDownGroup("");
+      setSuperGroupSearchTerm("");
     }
   }, [searchTab]);
 
@@ -685,6 +687,15 @@ export default function MaterialSearchPage() {
                 <div className="flex flex-col space-y-2">
                   <div>
                     <div className="block text-xs font-medium text-gray-700 mb-1.5">Super Groups</div>
+                    {superGroups.length > 0 && (
+                      <input
+                        type="text"
+                        placeholder="Search super groups..."
+                        value={superGroupSearchTerm}
+                        onChange={(e) => setSuperGroupSearchTerm(e.target.value)}
+                        className="w-full mb-1.5 px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    )}
                     <div className="border border-gray-200 rounded-md h-40 overflow-y-auto shadow-inner">
                       {superGroupsLoading ? (
                         <div className="p-3 text-center text-xs text-gray-500">
@@ -692,7 +703,17 @@ export default function MaterialSearchPage() {
                           <p className="mt-1.5">Loading super groups...</p>
                         </div>
                       ) : superGroups.length > 0 ? (
-                        superGroups.map((superGroup) => (
+                        superGroups
+                          .filter((sg) => {
+                            if (!superGroupSearchTerm.trim()) return true;
+                            const q = superGroupSearchTerm.toLowerCase();
+                            return (
+                              (sg.super_code && sg.super_code.toLowerCase().includes(q)) ||
+                              (sg.super_name && sg.super_name.toLowerCase().includes(q)) ||
+                              (sg.short_name && sg.short_name.toLowerCase().includes(q))
+                            );
+                          })
+                        .map((superGroup) => (
                           <div
                             key={superGroup.super_code}
                             onClick={() => setSelectedSuperGroup(superGroup.super_code)}
