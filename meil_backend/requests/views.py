@@ -35,6 +35,9 @@ def create_request(request):
             print(project_code)
             notes = data.get("notes", "")
             request_type = data.get("type", "")
+            mgrp_code = data.get("material_group")
+            attributes = data.get("attributes", {})  # dict of {attr_name: {value, uom}}
+            description = data.get("description", "")
 
             if not project_code:
                 return JsonResponse({"error": "project_id is required"}, status=400)
@@ -50,11 +53,24 @@ def create_request(request):
             if not project_obj:
                 return JsonResponse({"error": f"Project with id={project_code} not found"}, status=404)
 
+            material_group_obj = None
+            if mgrp_code:
+                material_group_obj = MatGroup.objects.filter(mgrp_code=mgrp_code, is_deleted=False).first()
+
+            # Build request_data with description + attributes
+            request_data = {}
+            if description:
+                request_data["description"] = description
+            if attributes:
+                request_data["attributes"] = attributes
+
             # ✅ Create Request
             request_obj = Request.objects.create(
                 project_code=project_obj,
                 notes=notes,
                 type=request_type,
+                material_group=material_group_obj,
+                request_data=request_data if request_data else None,
                 createdby=employee,
                 updatedby=employee,
                 isread=True,  # New requests start as read (no messages yet)

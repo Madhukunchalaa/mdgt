@@ -127,6 +127,12 @@ def list_matgattributes(request):
     include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
     items = MatgAttributeItem.objects.filter(is_deleted=True) if include_deleted else MatgAttributeItem.objects.filter(is_deleted=False)
 
+    mgrp_code_filter = request.GET.get('mgrp_code')
+    if mgrp_code_filter:
+        items = items.filter(mgrp_code__mgrp_code=mgrp_code_filter.strip().upper())
+
+    items = items.order_by('print_priority')
+
     data = []
     for item in items:
         data.append({

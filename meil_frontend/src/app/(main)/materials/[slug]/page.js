@@ -71,6 +71,9 @@ export default function MaterialDetailPage() {
   const [projects, setProjects] = useState([]);
   const [savingRequest, setSavingRequest] = useState(false);
   const [requestError, setRequestError] = useState(null);
+  const [groupAttributes, setGroupAttributes] = useState([]); // attribute definitions for current group
+  const [attributeValues, setAttributeValues] = useState({}); // {attr_name: {value, uom}}
+  const [requestDescription, setRequestDescription] = useState("");
 
   // Fetch material group info and material types on mount
   useEffect(() => {
@@ -330,28 +333,48 @@ export default function MaterialDetailPage() {
     }
   };
 
-  // Load projects for request modal
+  // Load projects + group attributes when modal opens
   useEffect(() => {
+    if (!token || !isRequestModalOpen) return;
+
     const loadProjects = async () => {
-      if (token && isRequestModalOpen) {
-        try {
-          const data = await fetchProjects(token);
-          setProjects(data || []);
-        } catch (err) {
-          console.error("Error loading projects:", err);
-        }
+      try {
+        const data = await fetchProjects(token);
+        setProjects(data || []);
+      } catch (err) {
+        console.error("Error loading projects:", err);
       }
     };
+
+    const loadGroupAttributes = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/matgattribute/list/?mgrp_code=${slug}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.ok) {
+          const attrs = await res.json();
+          setGroupAttributes(attrs || []);
+          // Init attribute values
+          const initVals = {};
+          (attrs || []).forEach(a => { initVals[a.attribute_name] = { value: "", uom: a.uom || "" }; });
+          setAttributeValues(initVals);
+        }
+      } catch (err) {
+        console.error("Error loading attributes:", err);
+      }
+    };
+
     loadProjects();
-  }, [token, isRequestModalOpen]);
+    loadGroupAttributes();
+  }, [token, isRequestModalOpen, slug]);
 
   // Handle Item Not Found button click
   const handleItemNotFound = () => {
-    setRequestFormData({
-      project_code: "",
-      notes: "",
-      type: "material"
-    });
+    setRequestFormData({ project_code: "", notes: "", type: "material" });
+    setRequestDescription("");
+    setAttributeValues({});
+    setGroupAttributes([]);
     setRequestError(null);
     setIsRequestModalOpen(true);
   };
@@ -380,14 +403,26 @@ export default function MaterialDetailPage() {
         return;
       }
 
-      await createRequest(token, requestFormData);
-      setIsRequestModalOpen(false);
-      setRequestFormData({
-        project_code: "",
-        notes: "",
-        type: "material"
+      // Only include attributes that have a value filled in
+      const filledAttributes = {};
+      Object.entries(attributeValues).forEach(([name, data]) => {
+        if (data.value && data.value.trim()) {
+          filledAttributes[name] = { value: data.value.trim(), uom: data.uom || "" };
+        }
       });
-      // Show success message (you can use toast here)
+
+      const payload = {
+        ...requestFormData,
+        material_group: slug,
+        description: requestDescription,
+        attributes: filledAttributes,
+      };
+
+      await createRequest(token, payload);
+      setIsRequestModalOpen(false);
+      setRequestFormData({ project_code: "", notes: "", type: "material" });
+      setRequestDescription("");
+      setAttributeValues({});
       alert("Request created successfully!");
     } catch (err) {
       setRequestError("Failed to create request: " + (err.response?.data?.error || err.message));
@@ -401,11 +436,9 @@ export default function MaterialDetailPage() {
   const handleCloseRequestModal = () => {
     setIsRequestModalOpen(false);
     setRequestError(null);
-    setRequestFormData({
-      project_code: "",
-      notes: "",
-      type: "material"
-    });
+    setRequestFormData({ project_code: "", notes: "", type: "material" });
+    setRequestDescription("");
+    setAttributeValues({});
   };
 
   // Toggle Favorite (for selected item)
@@ -542,8 +575,8 @@ export default function MaterialDetailPage() {
                       key={item.local_item_id || item.sap_id}
                       onClick={() => handleItemSelect(item)}
                       className={`px-3 py-2 cursor-pointer transition-colors ${selectedItem?.local_item_id === item.local_item_id
-                          ? "bg-blue-50 border-l-4 border-l-blue-600"
-                          : "hover:bg-gray-50"
+                        ? "bg-blue-50 border-l-4 border-l-blue-600"
+                        : "hover:bg-gray-50"
                         }`}
                     >
                       <div className="flex justify-between items-start">
@@ -694,8 +727,8 @@ export default function MaterialDetailPage() {
                     <button
                       onClick={toggleFavorite}
                       className={`inline-flex items-center px-3 py-1.5 text-xs border rounded-md shadow-sm font-medium ${isFavorite
-                          ? "border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
-                          : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+                        ? "border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                        : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
                         }`}
                     >
                       {isFavorite ? (
@@ -943,8 +976,8 @@ export default function MaterialDetailPage() {
                               onClick={() => handleAddMaterialFromSearch(item)}
                               disabled={isAlreadyFavorite || !token}
                               className={`ml-2 px-3 py-1.5 text-xs rounded-md font-medium ${isAlreadyFavorite
-                                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                  : "bg-blue-600 text-white hover:bg-blue-700"
+                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                : "bg-blue-600 text-white hover:bg-blue-700"
                                 }`}
                             >
                               {isAlreadyFavorite ? "Already Added" : "Add to Favorites"}
@@ -967,20 +1000,30 @@ export default function MaterialDetailPage() {
           <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-3 border-b">
               <h2 className="text-lg font-semibold text-gray-800">
-                Create Request - Item Not Found
+                Request New Item Code
               </h2>
-              <button onClick={handleCloseRequestModal} className="text-gray-400 hover:text-gray-600">
-                ✕
-              </button>
+              <button onClick={handleCloseRequestModal} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
 
-            <div className="p-3 grid grid-cols-1 gap-2">
+            <div className="p-4 space-y-4">
               {requestError && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-2">
                   <div className="text-red-600 text-xs">{requestError}</div>
                 </div>
               )}
 
+              {/* Material Group Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-4 items-center">
+                <div>
+                  <span className="text-xs text-blue-500 font-medium uppercase tracking-wide">Material Group</span>
+                  <div className="flex gap-3 items-baseline mt-0.5">
+                    <span className="font-mono font-bold text-blue-800">{slug}</span>
+                    <span className="text-sm text-blue-700">{materialGroup?.mgrp_longname || materialGroup?.mgrp_shortname}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Project Code */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Project Code *</label>
                 <select
@@ -998,19 +1041,95 @@ export default function MaterialDetailPage() {
                 </select>
               </div>
 
+              {/* Detailed Description */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Detailed Description of Item *</label>
+                <textarea
+                  value={requestDescription}
+                  onChange={(e) => setRequestDescription(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Describe the item you need (e.g. MS flange of 250mm outer dia with 8 holes as per IS code)..."
+                />
+              </div>
+
+              {/* Attributes Table */}
+              {groupAttributes.length > 0 && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">Attributes</label>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 w-1/3">Attribute</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">Value</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 w-28">UOM</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {groupAttributes.map((attr) => (
+                          <tr key={attr.id}>
+                            <td className="px-3 py-2 text-xs font-medium text-gray-700">{attr.attribute_name}</td>
+                            <td className="px-3 py-2">
+                              {attr.possible_values && attr.possible_values.length > 0 ? (
+                                <select
+                                  value={attributeValues[attr.attribute_name]?.value || ""}
+                                  onChange={(e) => setAttributeValues(prev => ({
+                                    ...prev,
+                                    [attr.attribute_name]: { ...prev[attr.attribute_name], value: e.target.value }
+                                  }))}
+                                  className="w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                  <option value="">-- Select --</option>
+                                  {attr.possible_values.map((v) => (
+                                    <option key={v} value={v}>{v}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={attributeValues[attr.attribute_name]?.value || ""}
+                                  onChange={(e) => setAttributeValues(prev => ({
+                                    ...prev,
+                                    [attr.attribute_name]: { ...prev[attr.attribute_name], value: e.target.value }
+                                  }))}
+                                  className="w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  placeholder="Enter value..."
+                                />
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="text"
+                                value={attributeValues[attr.attribute_name]?.uom || attr.uom || ""}
+                                onChange={(e) => setAttributeValues(prev => ({
+                                  ...prev,
+                                  [attr.attribute_name]: { ...prev[attr.attribute_name], uom: e.target.value }
+                                }))}
+                                className="w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="UOM"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Additional Notes</label>
                 <textarea
                   name="notes"
                   value={requestFormData.notes}
                   onChange={handleRequestInputChange}
-                  rows={3}
+                  rows={2}
                   className="w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Additional notes..."
+                  placeholder="Any additional notes..."
                 />
               </div>
-
-              <input type="hidden" name="type" value="material" />
             </div>
 
             <div className="flex justify-end space-x-2 p-3 border-t">
@@ -1027,7 +1146,7 @@ export default function MaterialDetailPage() {
                 className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center"
               >
                 {savingRequest && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-                Create Request
+                Request for New Item Code
               </button>
             </div>
           </div>
