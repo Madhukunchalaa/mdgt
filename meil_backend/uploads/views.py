@@ -1410,7 +1410,10 @@ def generate_matgattribute_template(Model):
 # Generate ItemMaster Attributes Template
 # -------------------------------------------------------------------
 def generate_itemmaster_attributes_template(mgrp_code=None):
-    """Generate wide-format attributes template: Sap Item Id | Uom | <attr1> | <attr2> ..."""
+    """Generate wide-format attributes template: Sap Item Id | Uom | <attr1> | <attr2> ...
+    If mgrp_code is given, columns = attributes for that group.
+    If not given, columns = all unique attribute names across all groups (sorted alphabetically).
+    """
     from matg_attributes.models import MatgAttributeItem
     from matgroups.models import MatGroup
 
@@ -1421,9 +1424,9 @@ def generate_itemmaster_attributes_template(mgrp_code=None):
     header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
     header_font = Font(bold=True, color="FFFFFF", size=11)
 
-    # Fetch attribute names for the given mgrp_code (ordered by sequence)
     attr_names = []
     if mgrp_code:
+        # Single group: fetch attributes ordered by print_priority
         try:
             matgroup = MatGroup.objects.filter(mgrp_code=mgrp_code.strip().upper()).first()
             if matgroup:
@@ -1432,6 +1435,17 @@ def generate_itemmaster_attributes_template(mgrp_code=None):
                     .order_by("print_priority")
                     .values_list("attribute_name", flat=True)
                 )
+        except Exception:
+            pass
+    else:
+        # All groups: collect unique attribute names, deduplicated, sorted alphabetically
+        try:
+            seen = {}
+            for item in MatgAttributeItem.objects.filter(is_deleted=False).order_by("print_priority"):
+                key = item.attribute_name.strip().lower()
+                if key not in seen:
+                    seen[key] = item.attribute_name.strip()
+            attr_names = sorted(seen.values(), key=lambda x: x.lower())
         except Exception:
             pass
 
@@ -1453,7 +1467,7 @@ def generate_itemmaster_attributes_template(mgrp_code=None):
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    mgrp_label = f"_{mgrp_code.upper()}" if mgrp_code else ""
+    mgrp_label = f"_{mgrp_code.upper()}" if mgrp_code else "_AllGroups"
     filename = f"ItemMaster_Attributes{mgrp_label}_template.xlsx"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
