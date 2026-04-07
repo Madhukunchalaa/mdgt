@@ -271,12 +271,12 @@ export default function UploadPage() {
                                         type="text"
                                         value={attrMgrpCode}
                                         onChange={(e) => setAttrMgrpCode(e.target.value)}
-                                        placeholder="Enter Material Group Code (e.g. PIPES)"
+                                        placeholder="Material Group Code (optional — leave blank for all groups)"
                                         className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                                     />
                                     <button
                                         onClick={() => handleDownload("attributes")}
-                                        disabled={!selectedTemplate || !attrMgrpCode.trim()}
+                                        disabled={!selectedTemplate}
                                         className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-xl shadow hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <Download className="w-5 h-5" />
