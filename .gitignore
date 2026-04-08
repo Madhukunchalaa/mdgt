@@ -7,6 +7,7 @@ meil_backend/staticfiles/
 meil_backend/db.sqlite3
 meil_backend/datadump.json
 meil_backend/.DS_Store
+meil_backend/.env
 *.pyc
 *.pyo
 
