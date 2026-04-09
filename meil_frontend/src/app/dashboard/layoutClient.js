@@ -33,7 +33,7 @@
 
 // export default function DashboardLayoutClient({ children }) {
 //   return (
-//     <Protected allowedRoles={["Admin", "MDGT"]}>
+//     <Protected allowedRoles={["Admin", "MDGT", "SUPERADMIN"]}>
 //       <SidebarProvider>
 //         <DashboardLayoutContent>{children}</DashboardLayoutContent>
 //       </SidebarProvider>
@@ -76,7 +76,7 @@ function DashboardLayoutContent({ children }) {
 
 export default function DashboardLayoutClient({ children }) {
   return (
-    <Protected allowedRoles={["Admin", "MDGT"]}>
+    <Protected allowedRoles={["Admin", "MDGT", "SUPERADMIN"]}>
       <SidebarProvider>
         <DashboardLayoutContent>{children}</DashboardLayoutContent>
       </SidebarProvider>
