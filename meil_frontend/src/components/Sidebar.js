@@ -92,8 +92,6 @@ export default function Sidebar() {
 
     // 🔑 Filter items based on permissions + CRUD flags
     const allowedNavItems = navItems.filter((item) => {
-        // SUPERADMIN sees all nav items
-        if (role?.toLowerCase() === "superadmin") return true;
         // Always show Uploads for MDGT role
         if (item.keywords.includes("upload") && role?.toLowerCase() === "mdgt") return true;
         const perm = permissions.find((p) =>
