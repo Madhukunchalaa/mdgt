@@ -59,13 +59,16 @@ read -rp "DB name   [meil_mdm]:       " DB_NAME;   DB_NAME="${DB_NAME:-meil_mdm}
 read -rp "DB user   [meil_user]:      " DB_USER;   DB_USER="${DB_USER:-meil_user}"
 read -rsp "DB password: "                           DB_PASS;  echo
 
-sudo -u postgres psql -tc "SELECT 1 FROM pg_user WHERE usename='$DB_USER'" | grep -q 1 \
-    || sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';"
+# Use 'su - postgres' to avoid pg_hba md5 auth issues with sudo -u postgres
+PG_CMD="su - postgres -c"
 
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 \
-    || sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+$PG_CMD "psql -tc \"SELECT 1 FROM pg_user WHERE usename='$DB_USER'\"" | grep -q 1 \
+    || $PG_CMD "psql -c \"CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';\""
 
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+$PG_CMD "psql -tc \"SELECT 1 FROM pg_database WHERE datname='$DB_NAME'\"" | grep -q 1 \
+    || $PG_CMD "psql -c \"CREATE DATABASE $DB_NAME OWNER $DB_USER;\""
+
+$PG_CMD "psql -c \"GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;\""
 info "Database '$DB_NAME' ready."
 
 # ─── 4. Backend ───────────────────────────────────────────────────────────────
