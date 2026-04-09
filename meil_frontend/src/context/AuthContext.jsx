@@ -13,7 +13,6 @@ export function AuthProvider({ children }) {
     const [permissions, setPermissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
-    console.log(user)
 
     useEffect(() => {
         const savedToken = localStorage.getItem("token");
