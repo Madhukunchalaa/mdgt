@@ -27,7 +27,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-)i^kgz81m+5b&kwqf6dx#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ["*", "localhost", "127.0.0.1", "mdgt-production.up.railway.app", "intuitive-dream-production.up.railway.app", "master-data-mangement-production.up.railway.app"]
+# ALLOWED_HOSTS: set comma-separated list in .env  e.g. ALLOWED_HOSTS=192.168.1.100,yourdomain.com
+_raw_hosts = os.environ.get('ALLOWED_HOSTS', '')
+ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',') if h.strip()] or ["*"]
 
 # AUTH_USER_MODEL = "Users.Employee"
 
@@ -139,20 +141,20 @@ SIMPLE_JWT = {
 # Email configuration
 # email_settings.py
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'mail.meghaeng.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "mdgtadmin@meghaeng.com"
-EMAIL_HOST_PASSWORD = "8PR*WnKRuuX9m!"
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'mail.meghaeng.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'mdgtadmin@meghaeng.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:3000')
 
-# settings.py
 # SMS configuration
-MSG91_AUTH_KEY = "your_auth_key_here"
-MSG91_SENDER_ID = "MSG91"
-MSG91_TEMPLATE_ID = "68ca5778bf32b21ab6415c74"   # if DLT enabled
-MSG91_ROUTE = "4"  # 4 = transactional, 1 = promotional
+MSG91_AUTH_KEY = os.environ.get('MSG91_AUTH_KEY', '')
+MSG91_SENDER_ID = os.environ.get('MSG91_SENDER_ID', 'MSG91')
+MSG91_TEMPLATE_ID = os.environ.get('MSG91_TEMPLATE_ID', '')
+MSG91_ROUTE = os.environ.get('MSG91_ROUTE', '4')
 
 
 

@@ -13,7 +13,7 @@ from Common.Middleware import authenticate, restrict
 
 # ✅ Helper to get employee name
 def get_employee_name(emp):
-    return emp.emp_name if emp else None
+    return emp.emp_name if emp else "-"
 
 
 # ✅ CREATE SuperGroup

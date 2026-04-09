@@ -1,28 +1,60 @@
-# Python / Django
-meil_backend/venv/
-meil_backend/__pycache__/
-meil_backend/**/__pycache__/
-meil_backend/**/*.pyc
-meil_backend/staticfiles/
-meil_backend/db.sqlite3
-meil_backend/datadump.json
-meil_backend/.DS_Store
-meil_backend/.env
-*.pyc
+# ─── Python / Django ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
 *.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.so
 
-# Next.js
-meil_frontend/.next/
-meil_frontend/node_modules/
+# Virtual environments
+meil_backend/venv/
+venv/
+env/
+ENV/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+meil_backend/db.sqlite3
+meil_backend/staticfiles/
+meil_backend/media/
+meil_backend/datadump.json
+
+# Environment files (NEVER commit real credentials)
+.env
+meil_backend/.env
 meil_frontend/.env.local
-meil_frontend/.env*.local
+meil_frontend/.env.production
 
-# OS
+# ─── Node / Next.js ───────────────────────────────────────────────────────────
+node_modules/
+meil_frontend/node_modules/
+meil_frontend/.next/
+meil_frontend/out/
+meil_frontend/.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Misc
-*.zip
-*.xlsx
+# ─── IDE ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
 *.docx
-~$*
+*.xlsx
+*.dump
+*.zip
+new/

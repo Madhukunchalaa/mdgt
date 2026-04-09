@@ -104,7 +104,7 @@ from Common.Middleware import authenticate, restrict
 def get_employee_name(emp):
     if emp:
         return emp.emp_name
-    return None
+    return "-"
 
 
 # ✅ CREATE Material Type

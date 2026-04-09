@@ -296,7 +296,7 @@ export default function MaterialTypesPage() {
               </td>
               <td className="px-3 py-2 text-gray-900 text-xs">{type.mat_type_desc}</td>
               <td className="px-3 py-2 text-gray-900 text-xs">{type.created}</td>
-              <td className="px-3 py-2 text-gray-900 text-xs">{type.createdby || "N/A"}</td>
+              <td className="px-3 py-2 text-gray-900 text-xs">{type.createdby || "-"}</td>
               <td className="px-3 py-2 text-gray-900 text-xs">{type.updated}</td>
               <td className="px-3 py-2">
                 <div className="flex space-x-1.5">
