@@ -48,6 +48,7 @@ export default function EmailDomainsPage() {
       console.error("Error loading email domains:", err);
     } finally {
       setLoading(false);
+    }
   };
 
   // Filter domains
