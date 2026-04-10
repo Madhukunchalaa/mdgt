@@ -86,17 +86,17 @@ export const createMaterialGroup = (token, data) => {
 
 export const updateMaterialGroup = (token, mgrp_code, data) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.put(`matgroups/${mgrp_code}/update/`, data).then(res => res.data);
+    return axiosInstance.put(`matgroups/${encodeURIComponent(mgrp_code)}/update/`, data).then(res => res.data);
 };
 
 export const deleteMaterialGroup = (token, mgrp_code) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.delete(`matgroups/${mgrp_code}/delete/`).then(res => res.data);
+    return axiosInstance.delete(`matgroups/${encodeURIComponent(mgrp_code)}/delete/`).then(res => res.data);
 };
 
 export const restoreMaterialGroup = (token, mgrp_code) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.post(`matgroups/${mgrp_code}/restore/`).then(res => res.data);
+    return axiosInstance.post(`matgroups/${encodeURIComponent(mgrp_code)}/restore/`).then(res => res.data);
 };
 
 // Material Types API
