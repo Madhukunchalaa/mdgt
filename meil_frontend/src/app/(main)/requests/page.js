@@ -30,6 +30,7 @@ export default function RequestsPage() {
     const [error, setError] = useState(null);
     const [formData, setFormData] = useState({
         project_code: "",
+        description: "",
         notes: "",
     });
     const [chatData, setChatData] = useState({
@@ -99,6 +100,7 @@ export default function RequestsPage() {
                 safe(request.type).includes(term) ||
                 safe(request.status).includes(term) ||
                 safe(request.notes).includes(term) ||
+                safe(request.user_text?.description).includes(term) ||
                 safe(request.sap_item).includes(term) ||
                 safe(request.material_group).includes(term) ||
                 safe(request.createdby || request.created_by).includes(term);
@@ -115,6 +117,7 @@ export default function RequestsPage() {
         setEditingRequest(null);
         setFormData({
             project_code: "",
+            description: "",
             notes: "",
         });
         setIsModalOpen(true);
@@ -457,7 +460,20 @@ export default function RequestsPage() {
   onClick={() => router.push(`/requests/${request.request_id}`)}
   className="px-3 py-2 text-sm text-gray-900 cursor-pointer hover:text-blue-600 hover:underline"
 >
-  {request.notes || "N/A"}
+                                              <div className="flex flex-col text-sm">
+                                                {request.user_text?.description && (
+                                                  <span className="font-medium text-gray-800">{request.user_text.description}</span>
+                                                )}
+                                                {request.notes && (
+                                                  <span className={request.user_text?.description ? "text-xs text-gray-500 mt-0.5 italic" : "text-gray-800"}>
+                                                    {request.notes}
+                                                  </span>
+                                                )}
+                                                {!request.user_text?.description && !request.notes && (
+                                                  <span className="text-gray-400 italic">N/A</span>
+                                                )}
+                                              </div>
+
 </td>
                                           <td className="px-3 py-2 text-sm">
                                             {request.is_unread && request.unread_count > 0 ? (
@@ -575,14 +591,26 @@ export default function RequestsPage() {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Detailed Description *</label>
+                                <textarea
+                                    name="description"
+                                    value={formData.description}
+                                    onChange={handleInputChange}
+                                    rows={3}
+                                    className="w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Describe the item or material group you need..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Additional Notes</label>
                                 <textarea
                                     name="notes"
                                     value={formData.notes}
                                     onChange={handleInputChange}
-                                    rows={3}
+                                    rows={2}
                                     className="w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Additional notes..."
+                                    placeholder="Any additional details or context..."
                                 />
                             </div>
                         </div>
