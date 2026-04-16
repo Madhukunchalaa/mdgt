@@ -89,10 +89,26 @@ export default function RequestsPage() {
     console.log("formdata : ", formData)
 
     // Filter requests
-    const filteredRequests = requests.filter(request => {
+    const filteredRequests = (requests || []).filter(request => {
+        if (!request) return false;
         try {
-            const term = searchTerm.toLowerCase();
+            const term = (searchTerm || "").toLowerCase();
             const safe = (v) => (v != null ? String(v).toLowerCase() : "");
+
+            // Robust description extraction
+            let description = "";
+            try {
+                if (request.user_text) {
+                    if (typeof request.user_text === 'object') {
+                        description = request.user_text.description || "";
+                    } else if (typeof request.user_text === 'string' && request.user_text.startsWith('{')) {
+                        const parsed = JSON.parse(request.user_text);
+                        description = parsed.description || "";
+                    }
+                }
+            } catch (e) {
+                console.warn("Failed to parse user_text", e);
+            }
 
             const matchesSearch =
                 safe(request.request_id).includes(term) ||
@@ -100,13 +116,14 @@ export default function RequestsPage() {
                 safe(request.type).includes(term) ||
                 safe(request.status).includes(term) ||
                 safe(request.notes).includes(term) ||
-                safe(request.user_text?.description).includes(term) ||
+                safe(description).includes(term) ||
                 safe(request.sap_item).includes(term) ||
                 safe(request.material_group).includes(term) ||
                 safe(request.createdby || request.created_by).includes(term);
 
             return matchesSearch;
-        } catch {
+        } catch (err) {
+            console.error("Error in filter:", err);
             return true;
         }
     });
@@ -461,17 +478,35 @@ export default function RequestsPage() {
   className="px-3 py-2 text-sm text-gray-900 cursor-pointer hover:text-blue-600 hover:underline"
 >
                                               <div className="flex flex-col text-sm">
-                                                {request.user_text?.description && (
-                                                  <span className="font-medium text-gray-800">{request.user_text.description}</span>
-                                                )}
-                                                {request.notes && (
-                                                  <span className={request.user_text?.description ? "text-xs text-gray-500 mt-0.5 italic" : "text-gray-800"}>
-                                                    {request.notes}
-                                                  </span>
-                                                )}
-                                                {!request.user_text?.description && !request.notes && (
-                                                  <span className="text-gray-400 italic">N/A</span>
-                                                )}
+                                                {(() => {
+                                                  let description = "";
+                                                  try {
+                                                    if (request.user_text) {
+                                                      if (typeof request.user_text === 'object') {
+                                                        description = request.user_text.description || "";
+                                                      } else if (typeof request.user_text === 'string' && request.user_text.startsWith('{')) {
+                                                        const parsed = JSON.parse(request.user_text);
+                                                        description = parsed.description || "";
+                                                      }
+                                                    }
+                                                  } catch (e) {}
+
+                                                  return (
+                                                    <>
+                                                      {description && (
+                                                        <span className="font-medium text-gray-800">{description}</span>
+                                                      )}
+                                                      {request.notes && (
+                                                        <span className={description ? "text-xs text-gray-500 mt-0.5 italic" : "text-gray-800"}>
+                                                          {request.notes}
+                                                        </span>
+                                                      )}
+                                                      {!description && !request.notes && (
+                                                        <span className="text-gray-400 italic">N/A</span>
+                                                      )}
+                                                    </>
+                                                  );
+                                                })()}
                                               </div>
 
 </td>
@@ -491,7 +526,15 @@ export default function RequestsPage() {
                                             {request.created_by || request.createdby || "N/A"}
                                           </td>
                                           <td className="px-3 py-2 text-sm text-gray-900">
-                                            {request.created ? new Date(request.created).toLocaleDateString() : "N/A"}
+                                            {(() => {
+                                              try {
+                                                return request.created ? new Date(request.created).toLocaleDateString() : "N/A";
+                                              } catch (e) {
+                                                console.error("Date parsing error:", e);
+                                                return "N/A";
+                                              }
+                                            })()}
+
                                           </td>
                                           <td className="px-3 py-2 text-sm text-gray-900">
   <div className="flex space-x-1">
