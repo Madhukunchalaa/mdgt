@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Search, Plus, Filter, Check, ChevronRight, X, MessageCircle, Package, BarChart3, Users, Bell, User, LogOut } from "lucide-react";
 
 export default function Home() {
@@ -147,40 +148,50 @@ export default function Home() {
       {/* Watermark Background */}
       <div className="fixed inset-0 pointer-events-none opacity-5 z-0">
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rotate-[345deg]">
-          <img
+          <Image
             src="https://meil.in/sites/default/files/meil_logo_old_update_24.png"
             alt="MEIL Logo Watermark"
-            className="w-96 h-48 object-contain filter grayscale"
+            width={384}
+            height={192}
+            className="object-contain filter grayscale"
           />
         </div>
 
         {/* Additional watermarks in corners */}
         <div className="absolute top-10 left-10 text-[#002147] text-center opacity-3 rotate-[345deg]">
-          <img
+          <Image
             src="https://meil.in/sites/default/files/meil_logo_old_update_24.png"
             alt="MEIL Logo"
-            className="w-16 h-8 object-contain filter grayscale"
+            width={64}
+            height={32}
+            className="object-contain filter grayscale"
           />
         </div>
         <div className="absolute top-10 right-10 text-[#002147] text-center opacity-3 rotate-[345deg]">
-          <img
+          <Image
             src="https://meil.in/sites/default/files/meil_logo_old_update_24.png"
             alt="MEIL Logo"
-            className="w-16 h-8 object-contain filter grayscale"
+            width={64}
+            height={32}
+            className="object-contain filter grayscale"
           />
         </div>
         <div className="absolute bottom-10 left-10 text-[#002147] text-center opacity-3 rotate-[345deg]">
-          <img
+          <Image
             src="https://meil.in/sites/default/files/meil_logo_old_update_24.png"
             alt="MEIL Logo"
-            className="w-16 h-8 object-contain filter grayscale"
+            width={64}
+            height={32}
+            className="object-contain filter grayscale"
           />
         </div>
         <div className="absolute bottom-10 right-10 text-[#002147] text-center opacity-3 rotate-[345deg]">
-          <img
+          <Image
             src="https://meil.in/sites/default/files/meil_logo_old_update_24.png"
             alt="MEIL Logo"
-            className="w-16 h-8 object-contain filter grayscale"
+            width={64}
+            height={32}
+            className="object-contain filter grayscale"
           />
         </div>
       </div>

@@ -55,6 +55,7 @@ export default function CompaniesPage() {
       console.error("Error loading companies:", err);
     } finally {
       setLoading(false);
+    }
   };
 
   // Filter companies
