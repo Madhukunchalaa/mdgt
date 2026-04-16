@@ -152,8 +152,7 @@ export default function CompaniesPage() {
         setError("Failed to delete company: " + (err.message || "Unknown error"));
         console.error("Error deleting company:", err);
       }
-    }
-  };
+    };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

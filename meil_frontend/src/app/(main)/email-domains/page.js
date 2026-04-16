@@ -177,8 +177,7 @@ export default function EmailDomainsPage() {
         setError("Failed to delete email domain: " + (err.message || "Unknown error"));
         console.error("Error deleting email domain:", err);
       }
-    }
-  };
+    };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
