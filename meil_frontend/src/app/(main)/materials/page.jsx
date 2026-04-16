@@ -898,6 +898,12 @@ export default function MaterialsPage() {
                               {checkPermission("item", "delete") && !material.is_deleted && (
                                 <button
                                   onClick={() => handleDelete(material.local_item_id)}
+                                  className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-50 transition duration-200"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
                               {material.is_deleted && (
                                 <button
                                   onClick={() => handleRestore(material.local_item_id)}
@@ -905,12 +911,6 @@ export default function MaterialsPage() {
                                   title="Restore"
                                 >
                                   <RotateCw size={14} />
-                                </button>
-                              )}
-                                  className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-50 transition duration-200"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={14} />
                                 </button>
                               )}
                             </div>
@@ -984,6 +984,12 @@ export default function MaterialsPage() {
                               {checkPermission("item", "delete") && !material.is_deleted && (
                                 <button
                                   onClick={() => handleDelete(material.local_item_id)}
+                                  className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-50 transition duration-200"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
                               {material.is_deleted && (
                                 <button
                                   onClick={() => handleRestore(material.local_item_id)}
@@ -991,12 +997,6 @@ export default function MaterialsPage() {
                                   title="Restore"
                                 >
                                   <RotateCw size={14} />
-                                </button>
-                              )}
-                                  className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-50 transition duration-200"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={14} />
                                 </button>
                               )}
                             </div>
