@@ -110,9 +110,9 @@ export default function Sidebar() {
                 <Image
                     src="https://meil.in/sites/default/files/meil_logo_old_update_24.png"
                     alt="MEIL Logo"
-                    className="bg-amber-50 w-3/4 mx-6 p-3 rounded-md"
-                    width={800}
-                    height={500}
+                    className="bg-amber-50 w-full lg:w-3/4 mx-auto p-3 rounded-md object-contain"
+                    width={200}
+                    height={100}
                 />
             </div>
 
