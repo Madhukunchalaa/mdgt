@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Plus, Edit, Trash2, Search, Mail, Info, Loader2,PlusCircle, Eye
+  Plus, Edit, Trash2, Search, Mail, Info, Loader2,PlusCircle, Eye, RotateCw
 } from "lucide-react";
 import { 
   fetchEmailDomains, 
   createEmailDomain, 
   updateEmailDomain, 
-  deleteEmailDomain 
+  deleteEmailDomain,
+  restoreEmailDomain
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
 import { useSortableData } from "@/hooks/useSortableData";
@@ -308,15 +309,24 @@ export default function EmailDomainsPage() {
                                 <Edit size={18} />
                               </button>
                             )}
-                            {checkPermission("email", "delete") && (
-                              <button
-                                onClick={() => handleDelete(domain.emaildomain_id)}
-                                className="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-100 transition duration-200"
-                                title="Delete"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            )}
+                             {checkPermission("email", "delete") && !domain.is_deleted && (
+                               <button
+                                 onClick={() => handleDelete(domain.emaildomain_id)}
+                                 className="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-100 transition duration-200"
+                                 title="Delete"
+                               >
+                                 <Trash2 size={18} />
+                               </button>
+                             )}
+                             {domain.is_deleted && (
+                               <button
+                                 onClick={() => handleRestore(domain.emaildomain_id)}
+                                 className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-100 transition duration-200"
+                                 title="Restore"
+                               >
+                                 <RotateCw size={18} />
+                               </button>
+                             )}
                           </div>
                         </td>
                       </tr>

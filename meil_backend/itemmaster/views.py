@@ -592,3 +592,19 @@ def delete_itemmaster(request, local_item_id):
     item.save()
 
     return JsonResponse({"message": "ItemMaster deleted successfully"}, status=200)
+
+
+@csrf_exempt
+@authenticate
+def restore_itemmaster(request, local_item_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    item = ItemMaster.objects.filter(local_item_id=local_item_id).first()
+    if not item:
+        return JsonResponse({"error": "ItemMaster not found"}, status=404)
+
+    item.is_deleted = False
+    item.save()
+
+    return JsonResponse({"message": "ItemMaster restored successfully"}, status=200)

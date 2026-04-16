@@ -772,22 +772,25 @@ def handle_matgattribute_phase_1(data, request):
             # Get validation (handle different header formats)
             validation = get_value(row, ["validation", "Validation", "VALIDATION"])
 
-            # update_or_create so edited rows are reflected in DB
-            _, created = MatgAttributeItem.objects.update_or_create(
+            # Check if this attribute already exists (even if deleted)
+            existing = MatgAttributeItem.objects.filter(
+                mgrp_code=mgrp_code,
+                attribute_name=attribute_name
+            ).first()
+            if existing:
+                errors.append({"row": idx, "error": f"Data is already loaded for attribute '{attribute_name}' in this material group."})
+                continue
+
+            MatgAttributeItem.objects.create(
                 mgrp_code=mgrp_code,
                 attribute_name=attribute_name,
-                defaults={
-                    "possible_values": possible_vals,
-                    "uom": uom,
-                    "print_priority": print_priority,
-                    "validation": validation,
-                    "is_deleted": False,
-                }
+                possible_values=possible_vals,
+                uom=uom,
+                print_priority=print_priority,
+                validation=validation,
+                is_deleted=False,
             )
-            if created:
-                inserted += 1
-            else:
-                updated += 1
+            inserted += 1
 
         except Exception as e:
             errors.append({"row": idx, "error": f"{str(e)}"})

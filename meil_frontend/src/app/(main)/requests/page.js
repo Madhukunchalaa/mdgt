@@ -8,8 +8,10 @@ import {
     createRequest,
     updateRequest,
     deleteRequest,
+    restoreRequest,
     assignSapItem,
 } from "@/lib/api";
+import { RotateCw } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useSortableData } from "@/hooks/useSortableData";
@@ -17,6 +19,7 @@ import { useSortableData } from "@/hooks/useSortableData";
 
 export default function RequestsPage() {
     const [requests, setRequests] = useState([]);
+    const [showDeleted, setShowDeleted] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isChatModalOpen, setIsChatModalOpen] = useState(false);
@@ -49,7 +52,7 @@ export default function RequestsPage() {
         if (!authLoading && token) {
             loadRequests();
         }
-    }, [authLoading, token]);
+    }, [authLoading, token, showDeleted]);
 
     // Listen for refresh event to reload requests list
     useEffect(() => {
@@ -76,7 +79,7 @@ export default function RequestsPage() {
                 return;
             }
 
-            const data = await fetchRequests(token);
+            const data = await fetchRequests(token, showDeleted);
             console.log("data : ", data)
             setRequests(data || []);
         } catch (err) {
@@ -324,6 +327,20 @@ export default function RequestsPage() {
         }
     };
 
+    const handleRestore = async (request_id) => {
+        if (!checkPermission("request", "update")) {
+            setError("You don't have permission to restore requests");
+            return;
+        }
+        try {
+            setError(null);
+            await restoreRequest(token, request_id);
+            await loadRequests();
+        } catch (err) {
+            setError("Failed to restore request: " + (err.response?.data?.error || err.message));
+        }
+    };
+
     const handleDelete = async (request_id) => {
             // Check permission before proceeding
             if (!checkPermission("request", "delete")) {
@@ -398,16 +415,23 @@ export default function RequestsPage() {
                 {/* Search */}
                 <div className="bg-white rounded-lg p-2 shadow-sm mb-3">
                     <div className="flex flex-col md:flex-row gap-2">
-                        <div className="relative flex-1 w-3/4">
+                        <div className="relative flex-1 w-1/2">
                             <Search className="absolute left-3  top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                             <input
                                 type="text"
-                                placeholder="Search requests by text, status, notes, or SAP item..."
+                                placeholder="Search requests..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
+                        <button
+                            onClick={() => setShowDeleted(v => !v)}
+                            className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                        >
+                            <Trash2 size={14} className="mr-1.5" />
+                            {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+                        </button>
                         {checkPermission("request", "create") && (
                         <button
                             onClick={handleAddNew}
@@ -451,7 +475,10 @@ export default function RequestsPage() {
   onClick={() => router.push(`/requests/${request.request_id}`)}
   className="px-3 py-2 text-sm text-gray-900 cursor-pointer hover:text-blue-600 hover:underline"
 >
-  {request.request_id}
+   <div className="flex items-center gap-2">
+     {request.request_id}
+     {request.is_deleted && <span className="text-[10px] bg-red-100 text-red-700 border border-red-300 px-1 py-0.5 rounded font-bold uppercase leading-none">Deleted</span>}
+   </div>
 </td>
 <td
   onClick={() => router.push(`/requests/${request.request_id}`)}
@@ -550,13 +577,22 @@ export default function RequestsPage() {
     )}
 
     {/* Delete */}
-    {checkPermission("request", "delete") && (
+    {checkPermission("request", "delete") && !request.is_deleted && (
       <button
         onClick={() => handleDelete(request.request_id)}
         className="p-1.5 text-red-600 hover:bg-red-100 rounded"
         title="Delete Request"
       >
         <Trash2 size={14} />
+      </button>
+    )}
+    {request.is_deleted && (
+      <button
+        onClick={() => handleRestore(request.request_id)}
+        className="p-1.5 text-blue-600 hover:bg-blue-100 rounded"
+        title="Restore Request"
+      >
+        <RotateCw size={14} />
       </button>
     )}
   </div>

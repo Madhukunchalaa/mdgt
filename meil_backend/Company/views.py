@@ -86,16 +86,35 @@ def update_company(request, company_name):
 def delete_company(request, company_name):
     if request.method == "DELETE":
         try:
-            try:
-                company = Company.objects.get(company_name=company_name)
-            except Company.DoesNotExist:
+            company = Company.objects.filter(company_name=company_name).first()
+            if not company:
                 return JsonResponse({"message": "Company not found"}, status=404)
 
-            company.delete()  # Hard delete
+            company.is_deleted = True
+            company.save()
             return JsonResponse({"message": "Company deleted successfully"}, status=200)
 
         except Exception as e:
             return JsonResponse({"message": str(e)}, status=500)
 
     return JsonResponse({"message": "Method Not Allowed"}, status=405)
+
+
+@csrf_exempt
+@authenticate
+def restore_company(request, company_name):
+    if request.method != "POST":
+        return JsonResponse({"message": "Method Not Allowed"}, status=405)
+
+    try:
+        company = Company.objects.filter(company_name=company_name).first()
+        if not company:
+            return JsonResponse({"message": "Company not found"}, status=404)
+
+        company.is_deleted = False
+        company.save()
+        return JsonResponse({"message": "Company restored successfully"}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"message": str(e)}, status=500)
 

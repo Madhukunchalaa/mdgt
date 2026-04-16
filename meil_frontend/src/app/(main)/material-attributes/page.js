@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import {
-  Plus, Edit, Trash2, Search, Settings, Loader2, PlusCircle, X, Eye, Download, Upload
+  Plus, Edit, Trash2, Search, Settings, Loader2, PlusCircle, X, Eye, Download, Upload, RotateCw
 } from "lucide-react";
 import * as XLSX from "xlsx";
-import { fetchMaterialAttributes, createMaterialAttribute, updateMaterialAttribute, deleteMaterialAttribute, fetchMaterialGroups } from "../../../lib/api";
+import { fetchMaterialAttributes, createMaterialAttribute, updateMaterialAttribute, deleteMaterialAttribute, restoreMaterialAttribute, fetchMaterialGroups } from "../../../lib/api";
 import {useAuth} from "@/context/AuthContext";
 import SearchableDropdown from "@/components/SearchableDropdown";
 import ViewModal from "@/components/ViewModal";
@@ -532,6 +532,17 @@ export default function MaterialAttributesPage() {
       }
   };
 
+  const handleRestore = async (id) => {
+    try {
+      setError(null);
+      await restoreMaterialAttribute(token, id);
+      await loadAttributes();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to restore material attribute: " + err.message);
+      console.error("Error restoring material attribute:", err);
+    }
+  };
+
   // Download filtered data as Excel (headers match upload format so edited file can be re-uploaded)
   const handleDownloadExcel = () => {
     const rows = sortedAttributes.map(attr => ({
@@ -833,13 +844,22 @@ export default function MaterialAttributesPage() {
                                 <Edit size={14} />
                               </button>
                             )}
-                            {checkPermission("attribute", "delete") && (
+                            {checkPermission("attribute", "delete") && !attribute.is_deleted && (
                               <button
                                 onClick={() => handleDelete(attribute.id)}
                                 className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-100 transition duration-200"
                                 title="Delete"
                               >
                                 <Trash2 size={14} />
+                              </button>
+                            )}
+                            {attribute.is_deleted && (
+                              <button
+                                onClick={() => handleRestore(attribute.id)}
+                                className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-100 transition duration-200"
+                                title="Restore"
+                              >
+                                <RotateCw size={14} />
                               </button>
                             )}
                           </div>

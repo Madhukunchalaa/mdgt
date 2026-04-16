@@ -138,3 +138,26 @@ def delete_email_domain(request, pk):
         return JsonResponse({"message": "Email domain deleted successfully"})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
+
+# Restore email domain
+@csrf_exempt
+@authenticate
+def restore_email_domain(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    user_payload = request.user
+    emp_id = user_payload.get("emp_id")
+    employee = get_object_or_404(Employee, emp_id=emp_id)
+
+    try:
+        domain = get_object_or_404(EmailDomain, pk=pk)
+        domain.is_deleted = False
+        domain.updated = timezone.now()
+        domain.updatedby = employee
+        domain.save()
+
+        return JsonResponse({"message": "Email domain restored successfully"})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)

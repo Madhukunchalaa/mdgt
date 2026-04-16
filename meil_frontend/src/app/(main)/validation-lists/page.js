@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Plus, Edit, Trash2, Search, CheckSquare, Info, Loader2
+  Plus, Edit, Trash2, Search, CheckSquare, Info, Loader2, RotateCw
 } from "lucide-react";
 import {
   fetchValidationLists,
   createValidationList,
   updateValidationList,
-  deleteValidationList
+  deleteValidationList,
+  restoreValidationList
 } from "../../../lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useSortableData } from "@/hooks/useSortableData";
@@ -172,6 +173,22 @@ export default function ValidationListsPage() {
     }
   };
 
+  const handleRestore = async (list_id) => {
+    if (!checkPermission("validation", "update")) {
+      setError("You don't have permission to restore validation lists");
+      return;
+    }
+    try {
+      setError(null);
+      const token = localStorage.getItem("token");
+      await restoreValidationList(token, list_id);
+      await loadValidationLists();
+    } catch (err) {
+      setError("Failed to restore validation list: " + (err.response?.data?.error || err.message));
+      console.error("Error restoring validation list:", err);
+    }
+  };
+
   const handleDelete = async (list_id) => {
       // Check permission before proceeding
       if (!checkPermission("validation", "delete")) {
@@ -306,13 +323,22 @@ export default function ValidationListsPage() {
                         <Edit size={16} />
                       </button>
                     )}
-                    {checkPermission("validation", "delete") && (
+                    {checkPermission("validation", "delete") && !list.is_deleted && (
                       <button
                         onClick={() => handleDelete(list.list_id)}
                         className="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50 transition duration-200"
                         title="Delete"
                       >
                         <Trash2 size={16} />
+                      </button>
+                    )}
+                    {list.is_deleted && (
+                      <button
+                        onClick={() => handleRestore(list.list_id)}
+                        className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition duration-200"
+                        title="Restore"
+                      >
+                        <RotateCw size={16} />
                       </button>
                     )}
                   </div>

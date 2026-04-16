@@ -1,7 +1,7 @@
 // app/dashboard/employees/page.js
 "use client";
 import { useState, useEffect } from "react";
-import { Users, Plus, Edit, Trash2, Search, Mail, Building, Calendar, User, RefreshCw, PlusCircle, Download } from "lucide-react";
+import { Users, Plus, Edit, Trash2, Search, Mail, Building, Calendar, User, RefreshCw, PlusCircle, Download, RotateCw } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext"; // 👈 import AuthContext
 import { useSortableData } from "@/hooks/useSortableData";
@@ -10,6 +10,7 @@ import { exportToExcel } from "@/lib/exportExcel";
 export default function EmployeesPage() {
     const { token, user, loading, checkPermission, role } = useAuth(); // 👈 use token and checkPermission
     const [employees, setEmployees] = useState([]);
+    const [showDeleted, setShowDeleted] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [formData, setFormData] = useState({
@@ -40,7 +41,7 @@ export default function EmployeesPage() {
         if (!token) return;
         const fetchEmployees = async () => {
             try {
-                const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/employee/list/`, {
+                const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/employee/list/?include_deleted=${showDeleted}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setEmployees(res.data.employees || []);
@@ -49,7 +50,7 @@ export default function EmployeesPage() {
             }
         };
         fetchEmployees();
-    }, [token]);
+    }, [token, showDeleted]);
 
     // ✅ Fetch roles for dropdown
     useEffect(() => {
@@ -146,6 +147,26 @@ export default function EmployeesPage() {
         setShowModal(true);
     };
 
+    const handleRestore = async (id) => {
+        if (!checkPermission("employee", "update")) {
+            setError("You don't have permission to restore employees");
+            return;
+        }
+        try {
+            await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/employee/restore/${id}/`, {}, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            // Refresh employee list
+            const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/employee/list/?include_deleted=${showDeleted}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setEmployees(res.data.employees || []);
+        } catch (err) {
+            setError("Failed to restore employee: " + (err.response?.data?.error || err.message));
+            console.error("Error restoring employee:", err);
+        }
+    };
+
     const handleDelete = async (id) => {
         if (!confirm("Are you sure you want to delete this employee?")) return;
 
@@ -159,7 +180,11 @@ export default function EmployeesPage() {
             await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/employee/delete/${id}/`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            setEmployees(employees.filter((e) => e.emp_id !== id));
+            // Refresh employee list to handle both hard? and soft delete consistency
+            const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/employee/list/?include_deleted=${showDeleted}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setEmployees(res.data.employees || []);
         } catch (err) {
             console.error("Error deleting employee:", err.response?.data || err.message);
         }
@@ -232,6 +257,13 @@ export default function EmployeesPage() {
                         <span className="bg-white text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">{sortedEmployees.length}</span>
                     </button>
                 )}
+                <button
+                    onClick={() => setShowDeleted(v => !v)}
+                    className={`flex items-center px-3 py-1.5 text-sm rounded-lg border transition-all ${showDeleted ? 'bg-red-100 border-red-400 text-red-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                >
+                    <Trash2 size={14} className="mr-1.5" />
+                    {showDeleted ? 'Hide Deleted' : 'Show Deleted'}
+                </button>
                 {checkPermission("employee", "create") && (
                     <button
                         onClick={() => {
@@ -279,7 +311,10 @@ export default function EmployeesPage() {
                                                 <div className="flex items-center gap-2">
                                                     <User className="w-4 h-4 text-blue-600" />
                                                     <div>
-                                                        <div className="font-medium text-xs text-gray-900">{employee.emp_name}</div>
+                                                        <div className="font-medium text-xs text-gray-900">
+                                                            {employee.emp_name}
+                                                            {employee.is_deleted && <span className="ml-2 text-[10px] bg-red-100 text-red-700 border border-red-300 px-1 py-0.5 rounded font-bold uppercase">Deleted</span>}
+                                                        </div>
                                                         <div className="text-xs text-gray-500 flex items-center">
                                                             <Mail className="w-3 h-3 mr-1" />
                                                             {employee.email}
@@ -316,13 +351,22 @@ export default function EmployeesPage() {
                                                             <Edit size={14} />
                                                         </button>
                                                     )}
-                                                    {checkPermission("employee", "delete") && (
+                                                    {checkPermission("employee", "delete") && !employee.is_deleted && (
                                                         <button
                                                             onClick={() => handleDelete(employee.emp_id)}
                                                             className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-100 transition duration-200"
                                                             title="Delete"
                                                         >
                                                             <Trash2 size={14} />
+                                                        </button>
+                                                    )}
+                                                    {employee.is_deleted && (
+                                                        <button
+                                                            onClick={() => handleRestore(employee.emp_id)}
+                                                            className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-100 transition duration-200"
+                                                            title="Restore"
+                                                        >
+                                                            <RotateCw size={14} />
                                                         </button>
                                                     )}
                                                 </div>

@@ -56,6 +56,16 @@ def create_matgattribute(request):
             if not attribute_name or not isinstance(possible_values, list):
                 return JsonResponse({"error": "Invalid attribute structure"}, status=400)
 
+            # Check if this attribute already exists (even if deleted)
+            existing = MatgAttributeItem.objects.filter(
+                mgrp_code=matgroup,
+                attribute_name=attribute_name
+            ).first()
+            if existing:
+                return JsonResponse({
+                    "error": f"Data is already loaded for attribute '{attribute_name}' in this material group. It may be in the 'Deleted' list."
+                }, status=400)
+
             # Auto-assign sequence if not provided: max existing + 10, starting at 10
             if not print_priority:
                 max_seq = MatgAttributeItem.objects.filter(
@@ -75,24 +85,18 @@ def create_matgattribute(request):
                         "error": f"Sequence {print_priority} is already assigned to attribute '{duplicate.attribute_name}' in this material group"
                     }, status=400)
 
-            item, created = MatgAttributeItem.objects.update_or_create(
+            item = MatgAttributeItem.objects.create(
                 mgrp_code=matgroup,
                 attribute_name=attribute_name,
-                defaults={
-                    "possible_values": possible_values,
-                    "uom": uom,
-                    "print_priority": print_priority,
-                    "validation": validation,
-                }
+                possible_values=possible_values,
+                uom=uom,
+                print_priority=print_priority,
+                validation=validation,
+                createdby=employee,
+                updatedby=employee,
+                updated=timezone.now(),
+                is_deleted=False
             )
-
-            # Set creator if new
-            if created:
-                item.createdby = employee
-
-            item.updatedby = employee
-            item.updated = timezone.now()
-            item.save()
 
             created_items.append({
                 "id": item.id,
@@ -125,7 +129,10 @@ def list_matgattributes(request):
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
     include_deleted = request.GET.get('include_deleted', 'false').lower() == 'true'
-    items = MatgAttributeItem.objects.filter(is_deleted=True) if include_deleted else MatgAttributeItem.objects.filter(is_deleted=False)
+    if include_deleted:
+        items = MatgAttributeItem.objects.all()
+    else:
+        items = MatgAttributeItem.objects.filter(is_deleted=False)
 
     mgrp_code_filter = request.GET.get('mgrp_code')
     if mgrp_code_filter:
@@ -242,4 +249,21 @@ def delete_matgattribute(request, item_id):
     item.is_deleted = True
     item.save()
 
+
     return JsonResponse({"message": "Attribute deleted successfully"}, status=200)
+
+
+@csrf_exempt
+@authenticate
+def restore_matgattribute(request, item_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    item = MatgAttributeItem.objects.filter(id=item_id).first()
+    if not item:
+        return JsonResponse({"error": "Attribute item not found"}, status=404)
+
+    item.is_deleted = False
+    item.save()
+
+    return JsonResponse({"message": "Attribute restored successfully"}, status=200)

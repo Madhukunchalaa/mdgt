@@ -336,8 +336,11 @@ def reset_password(request):
 def list_employees(request):
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=405)
-
-    employees = Employee.objects.filter(is_deleted=False)
+    include_deleted = request.GET.get('include_deleted') == 'true'
+    if include_deleted:
+        employees = Employee.objects.all()
+    else:
+        employees = Employee.objects.filter(is_deleted=False)
     data = []
     for emp in employees:
         data.append({
@@ -350,6 +353,7 @@ def list_employees(request):
             "createdby": emp.createdby.emp_name if emp.createdby else None,
             "updated": emp.updated.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "updatedby": emp.updatedby.emp_name if emp.updatedby else None,
+            "is_deleted": emp.is_deleted,
         })
 
     return JsonResponse({"employees": data})
@@ -469,7 +473,6 @@ def send_registration_invite(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-# 🔹 Delete Employee (Admin/SuperAdmin only)
 @csrf_exempt
 @authenticate
 # @restrict(roles=['Admin', 'SuperAdmin'])
@@ -480,6 +483,23 @@ def delete_employee(request, emp_id):
             employee.is_deleted = True
             employee.save()
             return JsonResponse({"message": "Employee deleted successfully"}, status=200)
+        except Employee.DoesNotExist:
+            return JsonResponse({"message": "Employee not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"message": str(e)}, status=500)
+
+    return JsonResponse({"message": "Method Not Allowed"}, status=405)
+
+
+@csrf_exempt
+@authenticate
+def restore_employee(request, emp_id):
+    if request.method == "POST":
+        try:
+            employee = Employee.objects.get(emp_id=emp_id)
+            employee.is_deleted = False
+            employee.save()
+            return JsonResponse({"message": "Employee restored successfully"}, status=200)
         except Employee.DoesNotExist:
             return JsonResponse({"message": "Employee not found"}, status=404)
         except Exception as e:

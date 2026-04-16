@@ -148,6 +148,11 @@ export const deleteProject = (token, project_code) => {
     return axiosInstance.delete(`projects/${project_code}/delete/`).then(res => res.data);
 };
 
+export const restoreProject = (token, project_code) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`projects/${project_code}/restore/`).then(res => res.data);
+};
+
 // Email Domains API
 export const fetchEmailDomains = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
@@ -168,6 +173,11 @@ export const updateEmailDomain = (token, pk, data) => {
 export const deleteEmailDomain = (token, pk) => {
     const axiosInstance = createAxiosInstance(token);
     return axiosInstance.delete(`emaildomains/${pk}/delete/`).then(res => res.data);
+};
+
+export const restoreEmailDomain = (token, pk) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`emaildomains/${pk}/restore/`).then(res => res.data);
 };
 
 // Companies API
@@ -192,6 +202,11 @@ export const deleteCompany = (token, company_name) => {
     return axiosInstance.delete(`company/companies/delete/${company_name}/`).then(res => res.data);
 };
 
+export const restoreCompany = (token, company_name) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`company/companies/restore/${company_name}/`).then(res => res.data);
+};
+
 // Requests API
 export const fetchRequests = (token) => {
     const axiosInstance = createAxiosInstance(token);
@@ -211,6 +226,11 @@ export const updateRequest = (token, request_id, data) => {
 export const deleteRequest = (token, request_id) => {
     const axiosInstance = createAxiosInstance(token);
     return axiosInstance.delete(`requests/delete/${request_id}/`).then(res => res.data);
+};
+
+export const restoreRequest = (token, request_id) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`requests/restore/${request_id}/`).then(res => res.data);
 };
 
 // Assign SAP Item (MDGT only)
@@ -273,6 +293,11 @@ export const deleteItemMaster = (token, local_item_id) => {
     return axiosInstance.delete(`itemmaster/delete/${local_item_id}/`).then(res => res.data);
 };
 
+export const restoreItemMaster = (token, local_item_id) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`itemmaster/restore/${local_item_id}/`).then(res => res.data);
+};
+
 // Super Groups API
 export const fetchSuperGroups = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
@@ -322,6 +347,11 @@ export const deleteValidationList = (token, list_id) => {
     return axiosInstance.delete(`validationlists/validation-lists/${list_id}/delete/`).then(res => res.data);
 };
 
+export const restoreValidationList = (token, list_id) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`validationlists/validation-lists/${list_id}/restore/`).then(res => res.data);
+};
+
 // Material Attributes API
 export const fetchMaterialAttributes = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
@@ -342,6 +372,11 @@ export const updateMaterialAttribute = (token, attrib_id, data) => {
 export const deleteMaterialAttribute = (token, attrib_id) => {
     const axiosInstance = createAxiosInstance(token);
     return axiosInstance.delete(`matgattribute/delete/${attrib_id}/`).then(res => res.data);
+};
+
+export const restoreMaterialAttribute = (token, attrib_id) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`matgattribute/restore/${attrib_id}/`).then(res => res.data);
 };
 
 // Chat API
@@ -411,7 +446,18 @@ export const fetchSharedMaterials = (token) => {
 };
 
 // Employees API (for share modal)
-export const fetchEmployees = (token) => {
+export const fetchEmployees = (token, includeDeleted = false) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("employee/list/").then(res => res.data.employees || []);
+    const url = includeDeleted ? "employee/list/?include_deleted=true" : "employee/list/";
+    return axiosInstance.get(url).then(res => res.data.employees || []);
+};
+
+export const deleteEmployee = (token, emp_id) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.delete(`employee/delete/${emp_id}/`).then(res => res.data);
+};
+
+export const restoreEmployee = (token, emp_id) => {
+    const axiosInstance = createAxiosInstance(token);
+    return axiosInstance.post(`employee/restore/${emp_id}/`).then(res => res.data);
 };

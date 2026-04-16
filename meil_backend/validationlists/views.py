@@ -48,7 +48,6 @@ def validation_list_update(request, list_id):
     return JsonResponse({"error": "Invalid method"}, status=405)
 
 
-# Delete (soft delete)
 @csrf_exempt
 def validation_list_delete(request, list_id):
     try:
@@ -60,4 +59,19 @@ def validation_list_delete(request, list_id):
         obj.is_deleted = True
         obj.save()
         return JsonResponse({"message": "Deleted"})
+    return JsonResponse({"error": "Invalid method"}, status=405)
+
+
+# Restore (soft delete)
+@csrf_exempt
+def validation_list_restore(request, list_id):
+    try:
+        obj = ValidationLists.objects.get(pk=list_id)
+    except ValidationLists.DoesNotExist:
+        return JsonResponse({"error": "Not found"}, status=404)
+
+    if request.method == "POST":
+        obj.is_deleted = False
+        obj.save()
+        return JsonResponse({"message": "Restored"})
     return JsonResponse({"error": "Invalid method"}, status=405)

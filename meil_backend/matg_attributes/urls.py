@@ -10,4 +10,7 @@ urlpatterns = [
 
     # Delete a single attribute row
     path('delete/<int:item_id>/', views.delete_matgattribute, name='delete_matgattribute'),
+
+    # Restore a single attribute row
+    path('restore/<int:item_id>/', views.restore_matgattribute, name='restore_matgattribute'),
 ]

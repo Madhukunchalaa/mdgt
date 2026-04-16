@@ -6,4 +6,5 @@ urlpatterns = [
     path("create/", views.create_email_domain, name="create_email_domain"),
     path("<int:pk>/update/", views.update_email_domain, name="update_email_domain"),
     path("<int:pk>/delete/", views.delete_email_domain, name="delete_email_domain"),
+    path("<int:pk>/restore/", views.restore_email_domain, name="restore_email_domain"),
 ]

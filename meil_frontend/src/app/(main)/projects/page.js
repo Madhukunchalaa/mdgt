@@ -1,11 +1,12 @@
 'use client';
 import React, { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Search, Folder, Info, Loader2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Folder, Info, Loader2, Eye, RotateCw } from "lucide-react";
 import { 
   fetchProjects, 
   createProject, 
   updateProject, 
-  deleteProject 
+  deleteProject,
+  restoreProject
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
 import ViewModal from "@/components/ViewModal";
@@ -153,6 +154,22 @@ export default function ProjectsPage() {
         }
     };
 
+    // ✅ Restore Project
+    const handleRestore = async (id) => {
+        if (!checkPermission("project", "update")) {
+            setError("You don't have permission to restore projects");
+            return;
+        }
+        try {
+            if (!token) { setError("No authentication token found"); return; }
+            await restoreProject(token, id);
+            await loadProjects();
+        } catch (err) {
+            setError("Failed to restore project: " + (err.message || "Unknown error"));
+            console.error("Error restoring project:", err);
+        }
+    };
+
     // ✅ Open View Modal
     const openViewModal = (project) => {
         setViewingProject(project);
@@ -295,13 +312,22 @@ export default function ProjectsPage() {
                       <Edit size={16} />
                     </button>
                   )}
-                  {checkPermission("project", "delete") && (
+                  {checkPermission("project", "delete") && !proj.is_deleted && (
                     <button
                       onClick={() => handleDelete(proj.id || proj.project_code, proj.project_name)}
                       className="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50 transition duration-200"
                       title="Delete"
                     >
                       <Trash2 size={16} />
+                    </button>
+                  )}
+                  {proj.is_deleted && (
+                    <button
+                      onClick={() => handleRestore(proj.id || proj.project_code)}
+                      className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition duration-200"
+                      title="Restore"
+                    >
+                      <RotateCw size={16} />
                     </button>
                   )}
                 </div>

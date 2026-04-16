@@ -329,8 +329,24 @@ def delete_request(request, request_id):
         if not req_obj:
             return JsonResponse({"error": "Request not found"}, status=404)
 
-        req_obj.delete()  # ✅ Hard delete
+        req_obj.is_deleted = True  # ✅ Soft delete
+        req_obj.save()
         return JsonResponse({"message": f"Request {request_id} deleted successfully"}, status=200)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+@csrf_exempt
+@authenticate
+def restore_request(request, request_id):
+    if request.method == "POST":
+        req_obj = Request.objects.filter(request_id=request_id).first()
+        if not req_obj:
+            return JsonResponse({"error": "Request not found"}, status=404)
+
+        req_obj.is_deleted = False  # ✅ Restore
+        req_obj.save()
+        return JsonResponse({"message": f"Request {request_id} restored successfully"}, status=200)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 

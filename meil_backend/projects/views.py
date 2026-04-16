@@ -202,14 +202,28 @@ def delete_project(request, pk):
 
         project = get_object_or_404(Project, pk=pk)
 
-        request_count = Request.objects.filter(project_code=project).count()
-        if request_count > 0:
-            return JsonResponse({
-                "error": f"Cannot delete '{project.project_code}'. It has {request_count} request(s) assigned. Remove them first."
-            }, status=400)
-
-        project.delete()  # hard delete
+        # Soft delete
+        project.is_deleted = True
+        project.save()
+        
         return JsonResponse({"message": f"Project '{project.project_code}' deleted successfully"})
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@csrf_exempt
+@authenticate
+def restore_project(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        project = get_object_or_404(Project, pk=pk)
+        project.is_deleted = False
+        project.save()
+        
+        return JsonResponse({"message": f"Project '{project.project_code}' restored successfully"})
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)

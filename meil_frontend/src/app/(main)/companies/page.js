@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Plus, Edit, Trash2, Search, Building, Info, Loader2, Eye
+  Plus, Edit, Trash2, Search, Building, Info, Loader2, Eye, RotateCw
 } from "lucide-react";
 import { 
   fetchCompanies, 
   createCompany, 
   updateCompany, 
-  deleteCompany 
+  deleteCompany,
+  restoreCompany
 } from "@/lib/api";
 import {useAuth} from "@/context/AuthContext";
 import ViewModal from "@/components/ViewModal";
@@ -261,13 +262,24 @@ export default function CompaniesPage() {
                             >
                               <Edit size={16} />
                             </button>
-                            <button
-                              onClick={() => handleDelete(company.company_name)}
-                              className="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50 transition duration-200"
-                              title="Delete"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {!company.is_deleted && (
+                              <button
+                                onClick={() => handleDelete(company.company_name)}
+                                className="text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50 transition duration-200"
+                                title="Delete"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                            {company.is_deleted && (
+                              <button
+                                onClick={() => handleRestore(company.company_name)}
+                                className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition duration-200"
+                                title="Restore"
+                              >
+                                <RotateCw size={16} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

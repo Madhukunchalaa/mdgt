@@ -7,6 +7,7 @@ urlpatterns = [
     path('list/', views.list_employees, name='employee-list'),
     path('update/<int:emp_id>/', views.update_employee, name='employee-update'),
     path('delete/<int:emp_id>/', views.delete_employee, name='employee-delete'),
+    path('restore/<int:emp_id>/', views.restore_employee, name='employee-restore'),
     path('verify_email_otp/', views.verify_email_otp, name='verify-email-otp'),
     path('verify_phone_otp/', views.verify_phone_otp),
     # 🔹 New endpoints

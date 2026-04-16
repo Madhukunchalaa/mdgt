@@ -2,10 +2,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Plus, Edit, Trash2, Search, Package, Info, Loader2, Eye, Download, ChevronLeft, ChevronRight
+  Plus, Edit, Trash2, Search, Package, Info, Loader2, Eye, Download, ChevronLeft, ChevronRight, RotateCw
 } from "lucide-react";
 import { exportToExcel } from "@/lib/exportExcel";
-import { fetchItemMasters, createItemMaster, updateItemMaster, deleteItemMaster, fetchMaterialGroups, fetchMaterialTypes, fetchMaterialAttributes } from "../../../lib/api";
+import { fetchItemMasters, createItemMaster, updateItemMaster, deleteItemMaster, restoreItemMaster, fetchMaterialGroups, fetchMaterialTypes, fetchMaterialAttributes } from "../../../lib/api";
 import {useAuth} from "@/context/AuthContext";
 import BackButton from "@/components/BackButton";
 import SearchableDropdown from "@/components/SearchableDropdown";
@@ -703,6 +703,20 @@ export default function MaterialsPage() {
     }
   };
 
+  const handleRestore = async (id) => {
+    if (!checkPermission("item", "update")) {
+      setError("You don't have permission to restore materials");
+      return;
+    }
+    try {
+      setError(null);
+      await restoreItemMaster(token, id);
+      await loadMaterials();
+    } catch (err) {
+      setError("Failed to restore material: " + (err.response?.data?.error || err.message));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-3">
       <div className="max-w-7xl mx-auto">
@@ -881,9 +895,18 @@ export default function MaterialsPage() {
                                   <Edit size={14} />
                                 </button>
                               )}
-                              {checkPermission("item", "delete") && (
+                              {checkPermission("item", "delete") && !material.is_deleted && (
                                 <button
                                   onClick={() => handleDelete(material.local_item_id)}
+                              {material.is_deleted && (
+                                <button
+                                  onClick={() => handleRestore(material.local_item_id)}
+                                  className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-100 transition duration-200"
+                                  title="Restore"
+                                >
+                                  <RotateCw size={14} />
+                                </button>
+                              )}
                                   className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-50 transition duration-200"
                                   title="Delete"
                                 >
@@ -958,9 +981,18 @@ export default function MaterialsPage() {
                                   <Edit size={14} />
                                 </button>
                               )}
-                              {checkPermission("item", "delete") && (
+                              {checkPermission("item", "delete") && !material.is_deleted && (
                                 <button
                                   onClick={() => handleDelete(material.local_item_id)}
+                              {material.is_deleted && (
+                                <button
+                                  onClick={() => handleRestore(material.local_item_id)}
+                                  className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-100 transition duration-200"
+                                  title="Restore"
+                                >
+                                  <RotateCw size={14} />
+                                </button>
+                              )}
                                   className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-50 transition duration-200"
                                   title="Delete"
                                 >
