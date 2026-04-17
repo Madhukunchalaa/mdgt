@@ -241,6 +241,10 @@ def update_request(request, request_id):
 
             # Update fields if provided
             req_obj.notes = data.get("notes", req_obj.notes)
+            if "description" in data:
+                if not isinstance(req_obj.request_data, dict):
+                    req_obj.request_data = {}
+                req_obj.request_data["description"] = data["description"]
             closetime_str = data.get("closetime")
             if closetime_str:
                 try:
