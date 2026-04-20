@@ -60,12 +60,12 @@ export default function RequestDetailPage() {
     let isManualClose = false;
 
     const connectWebSocket = () => {
-      // Determine WebSocket URL based on API base URL
-      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000';
       const wsProtocol = apiUrl.startsWith('https') ? 'wss:' : 'ws:';
       const wsHost = apiUrl.replace(/^https?:\/\//, '');
-      // Pass token as query parameter for authentication
       const wsUrl = `${wsProtocol}//${wsHost}/ws/chat/${id}/?token=${encodeURIComponent(token)}`;
+
+      console.log('🔗 Attempting to connect to WebSocket at:', wsUrl);
 
       try {
         ws = new WebSocket(wsUrl);
@@ -159,9 +159,20 @@ export default function RequestDetailPage() {
 
   useEffect(() => {
     if (request) {
+      let desc = "";
+      try {
+        if (request.user_text) {
+          if (typeof request.user_text === 'object') {
+            desc = request.user_text.description || "";
+          } else if (typeof request.user_text === 'string' && request.user_text.startsWith('{')) {
+            desc = JSON.parse(request.user_text).description || "";
+          }
+        }
+      } catch (e) {}
+
       setEditedRequest({
-        description: request.notes || "",
-        priority: request.priority || "High",
+        description: desc || request.notes || "",
+        priority: request.request_status || "High",
         status: request.status || "Open",
       });
     }
@@ -183,7 +194,7 @@ export default function RequestDetailPage() {
       setError(null);
 
       await updateRequest(token, id, {
-        notes: editedRequest.description,
+        description: editedRequest.description,  // 👈 now updates description natively!
         request_status: editedRequest.priority,  // ✅ map Priority → request_status
         status: editedRequest.status,            // ✅ map Status → status
       });
@@ -287,7 +298,8 @@ export default function RequestDetailPage() {
       if (token && request?.type === "material" && user?.role === 'MDGT') {
         try {
           const data = await fetchItemMasters(token);
-          setItems(data || []);
+          const finalItems = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+          setItems(finalItems);
         } catch (err) {
           console.error("Error loading items:", err);
         }
@@ -577,8 +589,19 @@ export default function RequestDetailPage() {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-600">
-                        {request.notes ||
-                          "Lorem ipsum dolor sit amet, consectetur adipiscing elit..."}
+                        {(() => {
+                          let desc = "";
+                          try {
+                            if (request.user_text) {
+                              if (typeof request.user_text === 'object') {
+                                desc = request.user_text.description || "";
+                              } else if (typeof request.user_text === 'string' && request.user_text.startsWith('{')) {
+                                desc = JSON.parse(request.user_text).description || "";
+                              }
+                            }
+                          } catch (e) {}
+                          return desc || request.notes || "Lorem ipsum dolor sit amet, consectetur adipiscing elit...";
+                        })()}
                       </p>
                     )}
                   </div>
