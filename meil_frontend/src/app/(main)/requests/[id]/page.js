@@ -592,13 +592,13 @@ export default function RequestDetailPage() {
                         </div>
 
                         {/* Display Attributes if they exist */}
-                        {request.user_text?.attributes && Object.keys(request.user_text.attributes).length > 0 && (
+                        {request.user_text?.attributes && typeof request.user_text.attributes === 'object' && Object.keys(request.user_text.attributes).length > 0 && (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
                             {Object.entries(request.user_text.attributes).map(([key, attr]) => (
                               <div key={key} className="bg-gray-50/50 p-2 rounded-lg border border-gray-100 flex flex-col">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{key}</span>
                                 <span className="text-sm font-semibold text-gray-700">
-                                  {attr.value} <span className="text-gray-400 font-normal ml-0.5">{attr.uom || ''}</span>
+                                  {attr?.value || ''} <span className="text-gray-400 font-normal ml-0.5">{attr?.uom || ''}</span>
                                 </span>
                               </div>
                             ))}
