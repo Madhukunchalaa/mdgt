@@ -407,7 +407,9 @@ export default function RequestDetailPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-3 sticky top-3 z-10">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
                 <div>
-                  <h1 className="text-lg font-bold text-gray-800">{request.title || "Request"}</h1>
+                  <h1 className="text-lg font-bold text-gray-800">
+                    {typeof request.title === 'object' ? (request.title?.description || "Request") : (request.title || "Request")}
+                  </h1>
                   <div className="flex items-center mt-1 flex-wrap gap-1.5">
                     <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-md">
                       {request.request_code || `REQ-${id}`}
@@ -587,7 +589,9 @@ export default function RequestDetailPage() {
                       <div className="space-y-4">
                         <div className="bg-white rounded-lg">
                           <p className="text-sm text-gray-700 leading-relaxed font-medium">
-                            {request.user_text?.description || "No description provided"}
+                            {typeof request.user_text?.description === 'object' 
+                              ? (request.user_text.description?.description || JSON.stringify(request.user_text.description))
+                              : (request.user_text?.description || "No description provided")}
                           </p>
                         </div>
 
