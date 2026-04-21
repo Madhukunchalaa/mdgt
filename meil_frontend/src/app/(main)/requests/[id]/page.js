@@ -9,7 +9,7 @@ export default function RequestDetailPage() {
   const { id } = useParams();
   // console.log("id : ", id)
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { token, user, role } = useAuth();
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [chatMessages, setChatMessages] = useState([]);
@@ -31,7 +31,7 @@ export default function RequestDetailPage() {
     priority: "High",
     status: "Open",
   });
-  const canClose = user?.role === 'MDGT'
+  const canClose = role === 'MDGT'
     ? (request?.type === 'material' ? Boolean(request?.sap_item) :
       request?.type === 'material group' ? Boolean(request?.material_group) : true)
     : true;
@@ -269,7 +269,7 @@ export default function RequestDetailPage() {
   // Load material groups when request type is "material group"
   useEffect(() => {
     const loadMaterialGroups = async () => {
-      if (token && request?.type === "material group" && user?.role === 'MDGT') {
+      if (token && request?.type === "material group" && role === 'MDGT') {
         try {
           const data = await fetchMaterialGroups(token);
           setMaterialGroups(data || []);
@@ -284,7 +284,7 @@ export default function RequestDetailPage() {
   // Load items when request type is "material"
   useEffect(() => {
     const loadItems = async () => {
-      if (token && request?.type === "material" && user?.role === 'MDGT') {
+      if (token && request?.type === "material" && role === 'MDGT') {
         try {
           const data = await fetchItemMasters(token);
           setItems(data || []);
@@ -481,7 +481,7 @@ export default function RequestDetailPage() {
                 </div> */}
               {/* </div> */}
               {/* MDGT: Assign SAP Item or Material Group based on type */}
-              {user?.role === 'MDGT' && request?.type === 'material' && (
+              {role === 'MDGT' && request?.type === 'material' && (
                 <div className="mt-2 flex items-end gap-2">
                   <div className="flex-1">
                     <SearchableDropdown
@@ -514,7 +514,7 @@ export default function RequestDetailPage() {
                   </button>
                 </div>
               )}
-              {user?.role === 'MDGT' && request?.type === 'material group' && (
+              {role === 'MDGT' && request?.type === 'material group' && (
                 <div className="mt-2 flex items-end gap-2">
                   <div className="flex-1">
                     <SearchableDropdown
@@ -555,49 +555,82 @@ export default function RequestDetailPage() {
               {/* Description */}
               <div className="border-t border-gray-200 pt-3">
                 <h2 className="font-semibold text-sm text-gray-700 mb-2">Description</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
                     {isEditing ? (
-                      <div className="space-y-2">
+                      <div className="space-y-4">
                         <textarea
                           value={editedRequest.description}
                           onChange={(e) =>
                             setEditedRequest({ ...editedRequest, description: e.target.value })
                           }
-                          className="w-full border rounded-lg p-1.5 text-sm"
+                          className="w-full border rounded-lg p-3 text-sm min-h-[100px] focus:ring-2 focus:ring-blue-500 outline-none"
+                          placeholder="Update internal notes..."
                         />
 
-                        <button
-                          onClick={handleSave}
-                          disabled={saving}
-                          className="bg-blue-600 text-white px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 flex items-center"
-                        >
-                          {saving ? "Saving..." : "Save Changes"}
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="bg-blue-600 text-white px-4 py-2 text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center"
+                          >
+                            {saving ? "Saving..." : "Save Changes"}
+                          </button>
+                          <button
+                            onClick={() => setIsEditing(false)}
+                            className="text-gray-600 px-4 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-600">
-                        {request.notes ||
-                          "Lorem ipsum dolor sit amet, consectetur adipiscing elit..."}
-                      </p>
+                      <div className="space-y-4">
+                        <div className="bg-white rounded-lg">
+                          <p className="text-sm text-gray-700 leading-relaxed font-medium">
+                            {request.user_text?.description || "No description provided"}
+                          </p>
+                        </div>
+
+                        {/* Display Attributes if they exist */}
+                        {request.user_text?.attributes && Object.keys(request.user_text.attributes).length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+                            {Object.entries(request.user_text.attributes).map(([key, attr]) => (
+                              <div key={key} className="bg-gray-50/50 p-2 rounded-lg border border-gray-100 flex flex-col">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{key}</span>
+                                <span className="text-sm font-semibold text-gray-700">
+                                  {attr.value} <span className="text-gray-400 font-normal ml-0.5">{attr.uom || ''}</span>
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Display internal notes as secondary info */}
+                        {request.notes && (
+                          <div className="mt-2 pt-3 border-t border-gray-100">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 text-blue-500">Internal Notes</p>
+                            <p className="text-sm text-gray-600 italic">"{request.notes}"</p>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
-                  {user?.role !== 'MDGT' && (
-                    <>
+                  {role !== 'MDGT' && (
+                    <div className="space-y-3">
                       {request?.type === 'material' && (
-                        <div className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-xs text-gray-500 uppercase font-medium mb-0.5">SAP Item</p>
-                          <p className="font-medium text-sm text-gray-800">{request.sap_item || "-"}</p>
+                        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">Assigned SAP Item</p>
+                          <p className="font-semibold text-sm text-gray-800">{request.sap_item || "Not Yet Assigned"}</p>
                         </div>
                       )}
                       {request?.type === 'material group' && (
-                        <div className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-xs text-gray-500 uppercase font-medium mb-0.5">Material Group</p>
-                          <p className="font-medium text-sm text-gray-800">{request.material_group || "-"}</p>
+                        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">Assigned Material Group</p>
+                          <p className="font-semibold text-sm text-gray-800">{request.material_group || "Not Yet Assigned"}</p>
                         </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
@@ -745,7 +778,7 @@ export default function RequestDetailPage() {
                         onClick={handleSave}
                         className="bg-blue-600 text-white px-3 py-1.5 text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
                         disabled={
-                          user?.role === 'MDGT' &&
+                          role === 'MDGT' &&
                           editedRequest.status === 'Closed' &&
                           ((request?.type === 'material' && !request?.sap_item) ||
                             (request?.type === 'material group' && !request?.material_group))
