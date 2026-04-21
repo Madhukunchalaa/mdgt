@@ -189,8 +189,7 @@ export default function RequestDetailPage() {
       });
 
       // Refresh request
-      const data = await fetchRequests(token);
-      const updated = data.find((r) => r.request_id == id);
+      const updated = await fetchRequests(token, id);
       if (updated && updated.type) updated.type = updated.type.toLowerCase();
       setRequest(updated);
 
@@ -234,8 +233,7 @@ export default function RequestDetailPage() {
       window.dispatchEvent(new CustomEvent('showToast', { detail: { type: 'success', message: `SAP Item ${sapId} assigned` } }));
       setSapId("");
       // refresh request header to reflect SAP item/status if needed
-      const data = await fetchRequests(token);
-      const updated = data.find((r) => r.request_id == id);
+      const updated = await fetchRequests(token, id);
       if (updated && updated.type) updated.type = updated.type.toLowerCase();
       setRequest(updated);
     } catch (err) {
@@ -257,8 +255,7 @@ export default function RequestDetailPage() {
       window.dispatchEvent(new CustomEvent('showToast', { detail: { type: 'success', message: `Material Group ${materialGroupCode} assigned` } }));
       setMaterialGroupCode("");
       // refresh request header to reflect material group/status if needed
-      const data = await fetchRequests(token);
-      const updated = data.find((r) => r.request_id == id);
+      const updated = await fetchRequests(token, id);
       if (updated && updated.type) updated.type = updated.type.toLowerCase();
       setRequest(updated);
     } catch (err) {
@@ -328,9 +325,7 @@ export default function RequestDetailPage() {
     const load = async () => {
       try {
         if (token) {
-          const data = await fetchRequests(token);
-          console.log("data : ", data)
-          const found = data.find(r => r.request_id == id);
+          const found = await fetchRequests(token, id);
           console.log("found : ", found)
           // Normalize type to lowercase so comparisons work regardless of how it was stored
           if (found && found.type) found.type = found.type.toLowerCase();
