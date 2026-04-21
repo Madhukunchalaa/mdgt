@@ -279,7 +279,7 @@ export default function RequestDetailPage() {
       }
     };
     loadMaterialGroups();
-  }, [token, request?.type, user?.role]);
+  }, [token, request?.type, role]);
 
   // Load items when request type is "material"
   useEffect(() => {
@@ -294,7 +294,7 @@ export default function RequestDetailPage() {
       }
     };
     loadItems();
-  }, [token, request?.type, user?.role]);
+  }, [token, request?.type, role]);
   console.log("chatMessages : ", chatMessages)
   const getPriorityClasses = (priority) => {
     switch (priority) {
@@ -609,7 +609,7 @@ export default function RequestDetailPage() {
                         {request.notes && (
                           <div className="mt-2 pt-3 border-t border-gray-100">
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 text-blue-500">Internal Notes</p>
-                            <p className="text-sm text-gray-600 italic">"{request.notes}"</p>
+                            <p className="text-sm text-gray-600 italic">&quot;{request.notes}&quot;</p>
                           </div>
                         )}
                       </div>
