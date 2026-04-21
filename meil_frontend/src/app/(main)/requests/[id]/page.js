@@ -634,7 +634,6 @@ export default function RequestDetailPage() {
                   )}
                 </div>
               </div>
-            </div>
 
             {/* Conversation */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
