@@ -28,6 +28,14 @@ export default function RequestsPage() {
     const [editingRequest, setEditingRequest] = useState(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+    
+    const renderSafe = (value, fallback = "") => {
+        if (value === null || value === undefined) return fallback;
+        if (typeof value === 'object') {
+            return value.description || value.name || value.text || JSON.stringify(value);
+        }
+        return String(value);
+    };
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
@@ -516,11 +524,7 @@ export default function RequestsPage() {
                                                       
                                                       if (typeof userText === 'object') {
                                                         const desc = userText.description;
-                                                        if (typeof desc === 'object') {
-                                                          description = desc.description || JSON.stringify(desc);
-                                                        } else {
-                                                          description = desc || "";
-                                                        }
+                                                        description = renderSafe(desc);
                                                       }
                                                     }
                                                   } catch (e) {}
@@ -557,7 +561,7 @@ export default function RequestsPage() {
                                             )}
                                           </td>
                                           <td className="px-3 py-2 text-sm text-gray-900">
-                                            {request.created_by || request.createdby || "N/A"}
+                                            {renderSafe(request.created_by || request.createdby, "N/A")}
                                           </td>
                                           <td className="px-3 py-2 text-sm text-gray-900">
                                             {(() => {

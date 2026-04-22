@@ -320,6 +320,15 @@ export default function RequestDetailPage() {
     }
   };
 
+  const renderSafe = (value, fallback = "") => {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'object') {
+      // If it's a legacy object with description/name, extract it, otherwise stringify
+      return value.description || value.name || value.text || JSON.stringify(value);
+    }
+    return String(value);
+  };
+
 
   useEffect(() => {
     const load = async () => {
@@ -429,7 +438,7 @@ export default function RequestDetailPage() {
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
                 <div>
                   <h1 className="text-lg font-bold text-gray-800">
-                    {typeof request.title === 'object' ? (request.title?.description || "Request") : (request.title || "Request")}
+                    {renderSafe(request.title, "Request")}
                   </h1>
                   <div className="flex items-center mt-1 flex-wrap gap-1.5">
                     <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-md">
@@ -458,18 +467,18 @@ export default function RequestDetailPage() {
                 <div className="flex items-center space-x-1.5">
                   <span
                     className={`px-2 py-0.5 text-xs rounded-full font-medium ${getPriorityClasses(
-                      request.request_status || "High"
+                      renderSafe(request.request_status, "High")
                     )}`}
                   >
-                    {request.request_status || "High"} Priority
+                    {renderSafe(request.request_status, "High")} Priority
                   </span>
 
                   <span
                     className={`px-2 py-0.5 text-xs rounded-full font-medium ${getStatusClasses(
-                      request.status || "Open"
+                      renderSafe(request.status, "Open")
                     )}`}
                   >
-                    {request.status || "Open"}
+                    {renderSafe(request.status, "Open")}
                   </span>
 
                   {/* <button className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
@@ -617,10 +626,7 @@ export default function RequestDetailPage() {
                                 }
                                 
                                 const desc = userText?.description;
-                                if (typeof desc === 'object') {
-                                  return desc?.description || JSON.stringify(desc);
-                                }
-                                return desc || "No description provided";
+                                return renderSafe(desc, "No description provided");
                               })()}
                             </p>
                           </div>
@@ -673,7 +679,7 @@ export default function RequestDetailPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
               <h2 className="font-semibold text-sm text-gray-700 mb-2">Conversation</h2>
               <div className="space-y-2 mb-3">
-                {chatMessages.map((chat, index) => {
+                {Array.isArray(chatMessages) && chatMessages.map((chat, index) => {
                   const isCurrentUser = chat.sender === user?.emp_name;
 
                   return (
@@ -738,7 +744,7 @@ export default function RequestDetailPage() {
                   <div>
                     <p className="font-medium text-xs text-gray-700">Created</p>
                     <p className="text-xs">
-                      By {request.createdby || "Unknown"} on{" "}
+                      By {renderSafe(request.createdby, "Unknown")} on{" "}
                       {request.created ? new Date(request.created).toLocaleDateString("en-GB") : "-"}
                     </p>
                   </div>
@@ -768,7 +774,7 @@ export default function RequestDetailPage() {
                   <div>
                     <p className="font-medium text-xs text-gray-700">Updated</p>
                     <p className="text-xs">
-                      By {request.updatedby || "System"} on{" "}
+                      By {renderSafe(request.updatedby, "System")} on{" "}
                       {request.updated ? new Date(request.updated).toLocaleDateString("en-GB") : "-"}
                     </p>
                   </div>
