@@ -333,11 +333,25 @@ export default function RequestDetailPage() {
             const requestData = Array.isArray(found) ? found.find(r => String(r.request_id) === String(id)) : found;
             
             if (requestData) {
+              // Sanitize user_text (handle stringified JSON)
+              let user_text = requestData.user_text;
+              if (typeof user_text === 'string' && user_text.startsWith('{')) {
+                try {
+                  user_text = JSON.parse(user_text);
+                } catch (e) {
+                  console.error("Error parsing user_text:", e);
+                }
+              }
+              
               // Normalize type to lowercase so comparisons work regardless of how it was stored
               if (requestData.type) {
                 requestData.type = requestData.type.toLowerCase();
               }
-              setRequest(requestData);
+              
+              setRequest({
+                ...requestData,
+                user_text
+              });
             } else {
               console.warn("Request data not found in response");
             }
