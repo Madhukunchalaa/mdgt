@@ -327,9 +327,21 @@ export default function RequestDetailPage() {
         if (token) {
           const found = await fetchRequests(token, id);
           console.log("found : ", found)
-          // Normalize type to lowercase so comparisons work regardless of how it was stored
-          if (found && found.type) found.type = found.type.toLowerCase();
-          setRequest(found);
+          
+          if (found) {
+            // Safety: if it's an array (fallback), find the item
+            const requestData = Array.isArray(found) ? found.find(r => String(r.request_id) === String(id)) : found;
+            
+            if (requestData) {
+              // Normalize type to lowercase so comparisons work regardless of how it was stored
+              if (requestData.type) {
+                requestData.type = requestData.type.toLowerCase();
+              }
+              setRequest(requestData);
+            } else {
+              console.warn("Request data not found in response");
+            }
+          }
 
           // Mark request as read when viewing
           if (found && !found.isread) {
@@ -582,13 +594,22 @@ export default function RequestDetailPage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="bg-white rounded-lg">
-                          <p className="text-sm text-gray-700 leading-relaxed font-medium">
-                            {typeof request.user_text?.description === 'object' 
-                              ? (request.user_text.description?.description || JSON.stringify(request.user_text.description))
-                              : (request.user_text?.description || "No description provided")}
-                          </p>
-                        </div>
+                          <div className="bg-white rounded-lg">
+                            <p className="text-sm text-gray-700 leading-relaxed font-medium">
+                              {(() => {
+                                let userText = request.user_text;
+                                if (typeof userText === 'string' && userText.startsWith('{')) {
+                                  try { userText = JSON.parse(userText); } catch (e) {}
+                                }
+                                
+                                const desc = userText?.description;
+                                if (typeof desc === 'object') {
+                                  return desc?.description || JSON.stringify(desc);
+                                }
+                                return desc || "No description provided";
+                              })()}
+                            </p>
+                          </div>
 
                         {/* Display Attributes if they exist */}
                         {request.user_text?.attributes && typeof request.user_text.attributes === 'object' && Object.keys(request.user_text.attributes).length > 0 && (

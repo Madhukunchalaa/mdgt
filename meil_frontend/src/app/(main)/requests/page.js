@@ -508,12 +508,19 @@ export default function RequestsPage() {
                                                 {(() => {
                                                   let description = "";
                                                   try {
-                                                    if (request.user_text) {
-                                                      if (typeof request.user_text === 'object') {
-                                                        description = request.user_text.description || "";
-                                                      } else if (typeof request.user_text === 'string' && request.user_text.startsWith('{')) {
-                                                        const parsed = JSON.parse(request.user_text);
-                                                        description = parsed.description || "";
+                                                    let userText = request.user_text;
+                                                    if (userText) {
+                                                      if (typeof userText === 'string' && userText.startsWith('{')) {
+                                                        try { userText = JSON.parse(userText); } catch (e) {}
+                                                      }
+                                                      
+                                                      if (typeof userText === 'object') {
+                                                        const desc = userText.description;
+                                                        if (typeof desc === 'object') {
+                                                          description = desc.description || JSON.stringify(desc);
+                                                        } else {
+                                                          description = desc || "";
+                                                        }
                                                       }
                                                     }
                                                   } catch (e) {}

@@ -208,9 +208,10 @@ export const restoreCompany = (token, company_name) => {
 };
 
 // Requests API
-export const fetchRequests = (token) => {
+export const fetchRequests = (token, id = null) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("requests/list/").then(res => res.data);
+    const url = id ? `requests/${id}/` : "requests/list/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createRequest = (token, data) => {
