@@ -269,9 +269,10 @@ export default function RequestDetailPage() {
       if (token && request?.type === "material group" && role === 'MDGT') {
         try {
           const data = await fetchMaterialGroups(token);
-          setMaterialGroups(data || []);
+          setMaterialGroups(Array.isArray(data) ? data : []);
         } catch (err) {
           console.error("Error loading material groups:", err);
+          setMaterialGroups([]);
         }
       }
     };
@@ -284,9 +285,10 @@ export default function RequestDetailPage() {
       if (token && request?.type === "material" && role === 'MDGT') {
         try {
           const data = await fetchItemMasters(token);
-          setItems(data || []);
+          setItems(Array.isArray(data) ? data : []);
         } catch (err) {
           console.error("Error loading items:", err);
+          setItems([]);
         }
       }
     };
