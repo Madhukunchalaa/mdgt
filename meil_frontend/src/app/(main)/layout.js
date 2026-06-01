@@ -24,8 +24,8 @@ function MainLayoutContent({ children }) {
                 <Navbar />
 
                 {/* Page content */}
-                <main className="flex-1 overflow-y-auto px-3">
-                    <div className="max-w-7xl mx-auto">{children}</div>
+                <main className="flex-1 overflow-y-auto px-3 h-full">
+                    <div className="max-w-7xl mx-auto h-full">{children}</div>
                 </main>
             </div>
         </div>

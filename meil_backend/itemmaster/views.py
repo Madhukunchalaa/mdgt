@@ -311,6 +311,7 @@ def list_itemmasters(request):
     search_query = request.GET.get('search', '').strip()
     mgrp_code = request.GET.get('mgrp_code', '').strip()
     mat_type_code = request.GET.get('mat_type_code', '').strip()
+    search_type = request.GET.get('search_type', '').strip()
     is_final_raw = request.GET.get('is_final') # 'true' or 'false'
     page = request.GET.get('page', 1)
     page_size = request.GET.get('page_size', 25)
@@ -332,6 +333,9 @@ def list_itemmasters(request):
 
     if mat_type_code and mat_type_code.lower() != 'all':
         items_qs = items_qs.filter(mat_type_code__mat_type_code=mat_type_code)
+
+    if search_type:
+        items_qs = items_qs.filter(mgrp_code__search_type__iexact=search_type)
 
     if is_final_raw is not None:
         items_qs = items_qs.filter(is_final=(is_final_raw.lower() == 'true'))
