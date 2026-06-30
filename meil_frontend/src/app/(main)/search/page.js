@@ -688,7 +688,7 @@ export default function MaterialSearchPage() {
             </div>
 
             {/* Tab Content - Description Area */}
-            <div className="mb-2">
+            <div className="mb-2 flex flex-col flex-grow">
               {searchTab === "freeText" && (
                 <>
                   <label htmlFor="free-text-description" className="block text-xs font-medium text-gray-700 mb-1.5">Search Query</label>
@@ -699,7 +699,7 @@ export default function MaterialSearchPage() {
                     onChange={(e) => setFreeTextQuery(e.target.value)}
                     className="w-full h-10 p-2 text-sm border border-gray-300 rounded-md resize-none shadow-sm focus:ring-blue-500 focus:border-blue-500"
                   />
-                  <div className="flex space-x-2 mt-2">
+                  <div className="flex space-x-2 mt-auto pt-2">
                     <button
                       onClick={handleFreeTextSearch}
                       disabled={freeTextLoading || !freeTextQuery.trim()}
@@ -894,7 +894,7 @@ export default function MaterialSearchPage() {
                   </span>
                 </div>
 
-                <div className="border border-gray-200 rounded-md h-64 overflow-y-auto shadow-inner">
+                <div className="border border-gray-200 rounded-md h-40 overflow-y-auto shadow-inner">
                   {freeTextLoading ? (
                     <div className="p-3 text-center text-xs text-gray-500">Searching...</div>
                   ) : freeTextResults.length > 0 ? (
@@ -952,7 +952,7 @@ export default function MaterialSearchPage() {
                   )}
                 </div>
 
-                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <div className="mt-auto pt-4 flex flex-col sm:flex-row gap-3">
                   <button 
                     onClick={handleMaterialGroupNotFound}
                     className="bg-red-600 text-white py-2 px-6 rounded-md shadow hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex-1"
@@ -1147,9 +1147,9 @@ export default function MaterialSearchPage() {
       </div>
 
       {/* Matching Materials Table Section */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto flex flex-col mt-4">
       {searchTab === "freeText" && (
-        <div className="w-full bg-white shadow-md rounded-lg overflow-hidden mt-4 p-6">
+        <div className="w-full bg-white shadow-md overflow-hidden p-3 md:px-6 py-6 flex flex-col flex-1">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-4 gap-3">
             <div>
               <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -1313,7 +1313,7 @@ export default function MaterialSearchPage() {
               )}
             </div>
           ) : (
-            <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-500">
+            <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-500 flex flex-col items-center justify-center flex-1">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
