@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createRequest, fetchProjects, fetchFavorites, addFavorite, removeFavorite } from "@/lib/api";
+import { createRequest, fetchProjects, fetchFavorites, addFavorite, removeFavorite, fetchItemMasters } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import SearchableDropdown from "@/components/SearchableDropdown";
-import { Loader2, Star } from "lucide-react";
+import { Loader2, Star, ChevronLeft, ChevronRight, Info } from "lucide-react";
 
 export default function MaterialSearchPage() {
   const router = useRouter();
@@ -14,28 +14,12 @@ export default function MaterialSearchPage() {
   const [selectedGroup, setSelectedGroup] = useState("");
 
   // Section 2 states - restored from sessionStorage on back-navigation
-  const [searchTab, setSearchTab] = useState(() => {
-    if (typeof window !== "undefined") return sessionStorage.getItem("search_searchTab") || "freeText";
-    return "freeText";
-  });
-
+  const [searchTab, setSearchTab] = useState("freeText");
   // Search type filter - maps to MatGroup.search_type
-  const [searchType, setSearchType] = useState(() => {
-    if (typeof window !== "undefined") return sessionStorage.getItem("search_searchType") || "";
-    return "";
-  });
-
+  const [searchType, setSearchType] = useState("");
   // Free text search states - persisted in sessionStorage until user clicks Clear
-  const [freeTextQuery, setFreeTextQuery] = useState(() => {
-    if (typeof window !== "undefined") return sessionStorage.getItem("search_freeTextQuery") || "";
-    return "";
-  });
-  const [freeTextResults, setFreeTextResults] = useState(() => {
-    if (typeof window !== "undefined") {
-      try { return JSON.parse(sessionStorage.getItem("search_freeTextResults") || "[]"); } catch { return []; }
-    }
-    return [];
-  });
+  const [freeTextQuery, setFreeTextQuery] = useState("");
+  const [freeTextResults, setFreeTextResults] = useState([]);
   const [freeTextLoading, setFreeTextLoading] = useState(false);
   const [selectedFreeTextGroup, setSelectedFreeTextGroup] = useState("");
 
@@ -78,6 +62,13 @@ export default function MaterialSearchPage() {
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
 
+  // Materials results states
+  const [materialsResults, setMaterialsResults] = useState([]);
+  const [materialsCount, setMaterialsCount] = useState(0);
+  const [materialsPage, setMaterialsPage] = useState(1);
+  const [materialsTotalPages, setMaterialsTotalPages] = useState(1);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
+
   // === REPLACED: remove filteredGroups computed from undefined materialGroups ===
   // const filteredGroups = materialGroups.filter(...)
   // Instead use the backend results directly:
@@ -88,11 +79,27 @@ export default function MaterialSearchPage() {
     if (selectedGroup) router.push(`/materials/${selectedGroup}`);
   };
 
+  // Restore state from sessionStorage after mount (avoids SSR hydration mismatch)
+  useEffect(() => {
+    setSearchTab(sessionStorage.getItem("search_searchTab") || "freeText");
+    setSearchType(sessionStorage.getItem("search_searchType") || "");
+    setFreeTextQuery(sessionStorage.getItem("search_freeTextQuery") || "");
+    try { setFreeTextResults(JSON.parse(sessionStorage.getItem("search_freeTextResults") || "[]")); } catch { /* ignore */ }
+    try { setMaterialsResults(JSON.parse(sessionStorage.getItem("search_materialsResults") || "[]")); } catch { /* ignore */ }
+    setMaterialsCount(Number(sessionStorage.getItem("search_materialsCount") || "0"));
+    setMaterialsPage(Number(sessionStorage.getItem("search_materialsPage") || "1"));
+    setMaterialsTotalPages(Number(sessionStorage.getItem("search_materialsTotalPages") || "1"));
+  }, []);
+
   // Persist search state to sessionStorage so it survives back-navigation
   useEffect(() => { sessionStorage.setItem("search_searchTab", searchTab); }, [searchTab]);
   useEffect(() => { sessionStorage.setItem("search_searchType", searchType); }, [searchType]);
   useEffect(() => { sessionStorage.setItem("search_freeTextQuery", freeTextQuery); }, [freeTextQuery]);
   useEffect(() => { sessionStorage.setItem("search_freeTextResults", JSON.stringify(freeTextResults)); }, [freeTextResults]);
+  useEffect(() => { sessionStorage.setItem("search_materialsResults", JSON.stringify(materialsResults)); }, [materialsResults]);
+  useEffect(() => { sessionStorage.setItem("search_materialsCount", String(materialsCount)); }, [materialsCount]);
+  useEffect(() => { sessionStorage.setItem("search_materialsPage", String(materialsPage)); }, [materialsPage]);
+  useEffect(() => { sessionStorage.setItem("search_materialsTotalPages", String(materialsTotalPages)); }, [materialsTotalPages]);
 
   // Load super groups for drill down search
   useEffect(() => {
@@ -171,10 +178,46 @@ export default function MaterialSearchPage() {
     );
   });
 
+  const searchMaterials = async (pageNumber = 1) => {
+    if (!freeTextQuery.trim()) return;
+    setMaterialsLoading(true);
+    try {
+      const data = await fetchItemMasters(token, {
+        search: freeTextQuery.trim(),
+        search_type: searchType || undefined,
+        page: pageNumber,
+        page_size: 10
+      });
+      setMaterialsResults(data.results || []);
+      setMaterialsCount(data.count || 0);
+      setMaterialsPage(data.current_page || 1);
+      setMaterialsTotalPages(data.total_pages || 1);
+    } catch (err) {
+      console.error("Failed to fetch materials:", err);
+      setMaterialsResults([]);
+      setMaterialsCount(0);
+      setMaterialsPage(1);
+      setMaterialsTotalPages(1);
+    } finally {
+      setMaterialsLoading(false);
+    }
+  };
+
+  const handleMaterialsPageChange = (newPage) => {
+    if (newPage < 1 || newPage > materialsTotalPages) return;
+    setMaterialsPage(newPage);
+    searchMaterials(newPage);
+  };
+
+
   // Free text search handler
   const handleFreeTextSearch = async () => {
     if (!freeTextQuery.trim()) return;
     setFreeTextLoading(true);
+    
+    // Search materials as well
+    searchMaterials(1);
+
     try {
       const body = { query: freeTextQuery };
       if (searchType) {
@@ -521,8 +564,8 @@ export default function MaterialSearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 w-full">
-      <div className="w-full bg-white shadow-md overflow-hidden">
+    <div className="flex flex-col h-full bg-gray-50 w-full">
+      <div className="w-full bg-white shadow-md flex-shrink-0">
         {/* Merged Section */}
         <div className="flex flex-col md:flex-row p-3 w-full">
           {/* Left Section - Search */}
@@ -654,7 +697,7 @@ export default function MaterialSearchPage() {
                     placeholder="Enter search query (searches in short name, long name, search text, etc.)..."
                     value={freeTextQuery}
                     onChange={(e) => setFreeTextQuery(e.target.value)}
-                    className="w-full h-24 p-2 text-sm border border-gray-300 rounded-md resize-none shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full h-10 p-2 text-sm border border-gray-300 rounded-md resize-none shadow-sm focus:ring-blue-500 focus:border-blue-500"
                   />
                   <div className="flex space-x-2 mt-2">
                     <button
@@ -672,8 +715,16 @@ export default function MaterialSearchPage() {
                         setFreeTextQuery("");
                         setFreeTextResults([]);
                         setSelectedFreeTextGroup("");
+                        setMaterialsResults([]);
+                        setMaterialsCount(0);
+                        setMaterialsPage(1);
+                        setMaterialsTotalPages(1);
                         sessionStorage.removeItem("search_freeTextQuery");
                         sessionStorage.removeItem("search_freeTextResults");
+                        sessionStorage.removeItem("search_materialsResults");
+                        sessionStorage.removeItem("search_materialsCount");
+                        sessionStorage.removeItem("search_materialsPage");
+                        sessionStorage.removeItem("search_materialsTotalPages");
                       }}
                       className="bg-gray-200 text-gray-700 py-1.5 px-3 text-sm rounded-md shadow hover:bg-gray-300"
                     >
@@ -1094,6 +1145,189 @@ export default function MaterialSearchPage() {
         </div>
 
       </div>
+
+      {/* Matching Materials Table Section */}
+      <div className="flex-1 overflow-y-auto">
+      {searchTab === "freeText" && (
+        <div className="w-full bg-white shadow-md rounded-lg overflow-hidden mt-4 p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-4 gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Info className="h-5 w-5 text-blue-600" />
+                Matching Materials
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Showing materials matching your query from the Item Master database
+              </p>
+            </div>
+            {!materialsLoading && (
+              <span className="text-xs bg-blue-100 text-blue-800 font-medium px-2.5 py-1 rounded-full">
+                Total Matches: {materialsCount}
+              </span>
+            )}
+          </div>
+
+          {materialsLoading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <p className="text-sm text-gray-500 mt-2 font-medium">Fetching matching materials...</p>
+            </div>
+          ) : materialsResults.length > 0 ? (
+            <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/4">
+                      Material Code
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/3">
+                      Short Description
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-5/12">
+                      Long Description
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {materialsResults.map((item) => {
+                    const materialCode = item.sap_item_id || item.local_item_id;
+                    const isDraft = !item.sap_item_id;
+                    const routeSlug = item.mgrp_code; // Material Group code to navigate to
+
+                    return (
+                      <tr
+                        key={item.id || item.local_item_id || item.sap_item_id}
+                        onClick={() => {
+                          if (routeSlug) {
+                            const itemId = item.sap_item_id || item.local_item_id;
+                            const params = new URLSearchParams();
+                            if (freeTextQuery.trim()) params.set("q", freeTextQuery.trim());
+                            if (itemId) params.set("item", itemId);
+                            router.push(`/materials/${routeSlug}?${params.toString()}`);
+                          }
+                        }}
+                        className="hover:bg-blue-50/50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm font-semibold text-blue-600 hover:underline">
+                              {materialCode}
+                            </span>
+                            {isDraft && (
+                              <span className="text-[10px] bg-yellow-100 text-yellow-800 font-medium px-2 py-0.5 rounded border border-yellow-200">
+                                Draft
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-gray-800 line-clamp-2">
+                            {item.short_name}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-600 line-clamp-2">
+                            {item.long_name || <span className="text-gray-400 italic">No long description</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* Pagination controls */}
+              {materialsTotalPages > 1 && (
+                <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                  <div className="flex-1 flex justify-between sm:hidden">
+                    <button
+                      onClick={() => handleMaterialsPageChange(materialsPage - 1)}
+                      disabled={materialsPage === 1}
+                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => handleMaterialsPageChange(materialsPage + 1)}
+                      disabled={materialsPage === materialsTotalPages}
+                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-700">
+                        Showing page <span className="font-semibold">{materialsPage}</span> of{' '}
+                        <span className="font-semibold">{materialsTotalPages}</span>
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        <button
+                          onClick={() => handleMaterialsPageChange(materialsPage - 1)}
+                          disabled={materialsPage === 1}
+                          className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="sr-only">Previous</span>
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        {Array.from({ length: Math.min(5, materialsTotalPages) }, (_, idx) => {
+                          // Center the pagination window around materialsPage
+                          let targetPage = idx + 1;
+                          if (materialsPage > 3) {
+                            targetPage = materialsPage - 3 + idx;
+                          }
+                          if (targetPage + (4 - idx) > materialsTotalPages) {
+                            targetPage = materialsTotalPages - 4 + idx;
+                          }
+                          if (targetPage < 1) targetPage = idx + 1;
+                          if (targetPage > materialsTotalPages) return null;
+
+                          return (
+                            <button
+                              key={targetPage}
+                              onClick={() => handleMaterialsPageChange(targetPage)}
+                              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                materialsPage === targetPage
+                                  ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                  : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                              }`}
+                            >
+                              {targetPage}
+                            </button>
+                          );
+                        })}
+                        <button
+                          onClick={() => handleMaterialsPageChange(materialsPage + 1)}
+                          disabled={materialsPage === materialsTotalPages}
+                          className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="sr-only">Next</span>
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-500">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+              <h3 className="mt-4 text-sm font-semibold text-gray-900">No matching materials</h3>
+              <p className="mt-2 text-xs text-gray-500">
+                {freeTextQuery.trim()
+                  ? `We couldn't find any materials matching "${freeTextQuery.trim()}".`
+                  : "Enter a search query above to find matching materials."}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+      </div>{/* end flex-1 overflow-y-auto */}
 
       {/* Favorites Modal */}
       {isFavoritesModalOpen && (

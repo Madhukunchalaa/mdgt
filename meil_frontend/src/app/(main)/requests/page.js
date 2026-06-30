@@ -28,6 +28,14 @@ export default function RequestsPage() {
     const [editingRequest, setEditingRequest] = useState(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+    
+    const renderSafe = (value, fallback = "") => {
+        if (value === null || value === undefined) return fallback;
+        if (typeof value === 'object') {
+            return value.description || value.name || value.text || JSON.stringify(value);
+        }
+        return String(value);
+    };
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
@@ -508,12 +516,15 @@ export default function RequestsPage() {
                                                 {(() => {
                                                   let description = "";
                                                   try {
-                                                    if (request.user_text) {
-                                                      if (typeof request.user_text === 'object') {
-                                                        description = request.user_text.description || "";
-                                                      } else if (typeof request.user_text === 'string' && request.user_text.startsWith('{')) {
-                                                        const parsed = JSON.parse(request.user_text);
-                                                        description = parsed.description || "";
+                                                    let userText = request.user_text;
+                                                    if (userText) {
+                                                      if (typeof userText === 'string' && userText.startsWith('{')) {
+                                                        try { userText = JSON.parse(userText); } catch (e) {}
+                                                      }
+                                                      
+                                                      if (typeof userText === 'object') {
+                                                        const desc = userText.description;
+                                                        description = renderSafe(desc);
                                                       }
                                                     }
                                                   } catch (e) {}
@@ -550,7 +561,7 @@ export default function RequestsPage() {
                                             )}
                                           </td>
                                           <td className="px-3 py-2 text-sm text-gray-900">
-                                            {request.created_by || request.createdby || "N/A"}
+                                            {renderSafe(request.created_by || request.createdby, "N/A")}
                                           </td>
                                           <td className="px-3 py-2 text-sm text-gray-900">
                                             {(() => {

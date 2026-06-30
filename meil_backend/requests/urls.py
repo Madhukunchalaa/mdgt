@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path("create/", views.create_request, name="create_request"),
     path("list/", views.list_requests, name="list_requests"),
+    path("<int:request_id>/", views.detail_request, name="detail_request"),
     path("update/<int:request_id>/", views.update_request, name="update_request"),
     path("delete/<int:request_id>/", views.delete_request, name="delete_request"),
     path("restore/<int:request_id>/", views.restore_request, name="restore_request"),

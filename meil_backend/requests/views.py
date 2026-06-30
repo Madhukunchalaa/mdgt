@@ -202,6 +202,68 @@ def list_requests(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+@csrf_exempt
+@authenticate
+def detail_request(request, request_id):
+    if request.method == "GET":
+        try:
+            r = Request.objects.filter(request_id=request_id, is_deleted=False).first()
+            if not r:
+                return JsonResponse({"error": "Request not found"}, status=404)
+
+            # Re-use serialization logic
+            emp_id = request.user.get("emp_id")
+            employee = Employee.objects.filter(emp_id=emp_id).first()
+            user_role = employee.role.role_name if employee and employee.role else None
+
+            # Calculate is_unread (simplified version for single record)
+            is_unread = False
+            if r.request_data and "chat" in r.request_data:
+                chat_messages = r.request_data.get("chat", [])
+                if chat_messages:
+                    last_message = chat_messages[-1]
+                    last_sender_role = last_message.get("sender_role")
+                    last_sender_emp_id = last_message.get("sender_emp_id")
+                    
+                    if user_role in ["MDGT", "Admin", "SuperAdmin"]:
+                        if last_sender_role not in ["MDGT", "Admin", "SuperAdmin"] and last_sender_emp_id != employee.emp_id:
+                            is_unread = True
+                    elif r.createdby == employee:
+                        if last_sender_role in ["MDGT", "Admin", "SuperAdmin"] and last_sender_emp_id != employee.emp_id:
+                            is_unread = True
+
+            data = {
+                "request_id": r.request_id,
+                "request_date": r.request_date.strftime("%Y-%m-%d %H:%M:%S"),
+                "request_status": r.request_status,
+                "project_code": r.project_code.project_code if r.project_code else None,
+                "project_name": r.project_code.project_name if r.project_code else None,
+                "user_text": r.request_data,
+                "sap_item": r.sap_item.sap_item_id if r.sap_item else None,
+                "material_group": r.material_group.mgrp_code if r.material_group else None,
+                "notes": r.notes,
+                "type": r.type,
+                "closetime": r.closetime.strftime("%Y-%m-%d") if r.closetime else None,
+                "status": r.status,
+                "timetaken": r.timetaken,
+                "created": r.created.strftime("%Y-%m-%d %H:%M:%S"),
+                "updated": r.updated.strftime("%Y-%m-%d %H:%M:%S"),
+                "createdby": get_employee_name(r.createdby),
+                "updatedby": get_employee_name(r.updatedby),
+                "createdby_name": get_employee_name(r.createdby),
+                "isread": r.isread,
+                "tobeshown": r.tobeshown.strftime("%Y-%m-%d %H:%M:%S") if r.tobeshown else None,
+                "is_unread": is_unread
+            }
+            return JsonResponse(data, status=200)
+        except Exception as e:
+            print(e)
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+
 # ===========================
 # UPDATE Request
 # ===========================

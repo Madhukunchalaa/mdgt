@@ -9,7 +9,7 @@ export default function RequestDetailPage() {
   const { id } = useParams();
   // console.log("id : ", id)
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { token, user, role } = useAuth();
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [chatMessages, setChatMessages] = useState([]);
@@ -31,7 +31,7 @@ export default function RequestDetailPage() {
     priority: "High",
     status: "Open",
   });
-  const canClose = user?.role === 'MDGT'
+  const canClose = role === 'MDGT'
     ? (request?.type === 'material' ? Boolean(request?.sap_item) :
       request?.type === 'material group' ? Boolean(request?.material_group) : true)
     : true;
@@ -200,8 +200,7 @@ export default function RequestDetailPage() {
       });
 
       // Refresh request
-      const data = await fetchRequests(token);
-      const updated = data.find((r) => r.request_id == id);
+      const updated = await fetchRequests(token, id);
       if (updated && updated.type) updated.type = updated.type.toLowerCase();
       setRequest(updated);
 
@@ -245,8 +244,7 @@ export default function RequestDetailPage() {
       window.dispatchEvent(new CustomEvent('showToast', { detail: { type: 'success', message: `SAP Item ${sapId} assigned` } }));
       setSapId("");
       // refresh request header to reflect SAP item/status if needed
-      const data = await fetchRequests(token);
-      const updated = data.find((r) => r.request_id == id);
+      const updated = await fetchRequests(token, id);
       if (updated && updated.type) updated.type = updated.type.toLowerCase();
       setRequest(updated);
     } catch (err) {
@@ -268,8 +266,7 @@ export default function RequestDetailPage() {
       window.dispatchEvent(new CustomEvent('showToast', { detail: { type: 'success', message: `Material Group ${materialGroupCode} assigned` } }));
       setMaterialGroupCode("");
       // refresh request header to reflect material group/status if needed
-      const data = await fetchRequests(token);
-      const updated = data.find((r) => r.request_id == id);
+      const updated = await fetchRequests(token, id);
       if (updated && updated.type) updated.type = updated.type.toLowerCase();
       setRequest(updated);
     } catch (err) {
@@ -280,33 +277,35 @@ export default function RequestDetailPage() {
   // Load material groups when request type is "material group"
   useEffect(() => {
     const loadMaterialGroups = async () => {
-      if (token && request?.type === "material group" && user?.role === 'MDGT') {
+      if (token && request?.type === "material group" && role === 'MDGT') {
         try {
           const data = await fetchMaterialGroups(token);
-          setMaterialGroups(data || []);
+          setMaterialGroups(Array.isArray(data) ? data : []);
         } catch (err) {
           console.error("Error loading material groups:", err);
+          setMaterialGroups([]);
         }
       }
     };
     loadMaterialGroups();
-  }, [token, request?.type, user?.role]);
+  }, [token, request?.type, role]);
 
   // Load items when request type is "material"
   useEffect(() => {
     const loadItems = async () => {
-      if (token && request?.type === "material" && user?.role === 'MDGT') {
+      if (token && request?.type === "material" && role === 'MDGT') {
         try {
           const data = await fetchItemMasters(token);
           const finalItems = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
           setItems(finalItems);
         } catch (err) {
           console.error("Error loading items:", err);
+          setItems([]);
         }
       }
     };
     loadItems();
-  }, [token, request?.type, user?.role]);
+  }, [token, request?.type, role]);
   console.log("chatMessages : ", chatMessages)
   const getPriorityClasses = (priority) => {
     switch (priority) {
@@ -335,18 +334,51 @@ export default function RequestDetailPage() {
     }
   };
 
+  const renderSafe = (value, fallback = "") => {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'object') {
+      // If it's a legacy object with description/name, extract it, otherwise stringify
+      return value.description || value.name || value.text || JSON.stringify(value);
+    }
+    return String(value);
+  };
+
 
   useEffect(() => {
     const load = async () => {
       try {
         if (token) {
-          const data = await fetchRequests(token);
-          console.log("data : ", data)
-          const found = data.find(r => r.request_id == id);
+          const found = await fetchRequests(token, id);
           console.log("found : ", found)
-          // Normalize type to lowercase so comparisons work regardless of how it was stored
-          if (found && found.type) found.type = found.type.toLowerCase();
-          setRequest(found);
+          
+          if (found) {
+            // Safety: if it's an array (fallback), find the item
+            const requestData = Array.isArray(found) ? found.find(r => String(r.request_id) === String(id)) : found;
+            
+            if (requestData) {
+              // Sanitize user_text (handle stringified JSON)
+              let user_text = requestData.user_text;
+              if (typeof user_text === 'string' && user_text.startsWith('{')) {
+                try {
+                  user_text = JSON.parse(user_text);
+                } catch (e) {
+                  console.error("Error parsing user_text:", e);
+                }
+              }
+              
+              // Normalize type to lowercase so comparisons work regardless of how it was stored
+              if (requestData.type) {
+                requestData.type = requestData.type.toLowerCase();
+              }
+              
+              setRequest({
+                ...requestData,
+                user_text
+              });
+            } else {
+              console.warn("Request data not found in response");
+            }
+          }
 
           // Mark request as read when viewing
           if (found && !found.isread) {
@@ -419,7 +451,9 @@ export default function RequestDetailPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-3 sticky top-3 z-10">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
                 <div>
-                  <h1 className="text-lg font-bold text-gray-800">{request.title || "Request"}</h1>
+                  <h1 className="text-lg font-bold text-gray-800">
+                    {renderSafe(request.title, "Request")}
+                  </h1>
                   <div className="flex items-center mt-1 flex-wrap gap-1.5">
                     <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-md">
                       {request.request_code || `REQ-${id}`}
@@ -447,18 +481,18 @@ export default function RequestDetailPage() {
                 <div className="flex items-center space-x-1.5">
                   <span
                     className={`px-2 py-0.5 text-xs rounded-full font-medium ${getPriorityClasses(
-                      request.request_status || "High"
+                      renderSafe(request.request_status, "High")
                     )}`}
                   >
-                    {request.request_status || "High"} Priority
+                    {renderSafe(request.request_status, "High")} Priority
                   </span>
 
                   <span
                     className={`px-2 py-0.5 text-xs rounded-full font-medium ${getStatusClasses(
-                      request.status || "Open"
+                      renderSafe(request.status, "Open")
                     )}`}
                   >
-                    {request.status || "Open"}
+                    {renderSafe(request.status, "Open")}
                   </span>
 
                   {/* <button className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
@@ -493,7 +527,7 @@ export default function RequestDetailPage() {
                 </div> */}
               {/* </div> */}
               {/* MDGT: Assign SAP Item or Material Group based on type */}
-              {user?.role === 'MDGT' && request?.type === 'material' && (
+              {role === 'MDGT' && request?.type === 'material' && (
                 <div className="mt-2 flex items-end gap-2">
                   <div className="flex-1">
                     <SearchableDropdown
@@ -526,7 +560,7 @@ export default function RequestDetailPage() {
                   </button>
                 </div>
               )}
-              {user?.role === 'MDGT' && request?.type === 'material group' && (
+              {role === 'MDGT' && request?.type === 'material group' && (
                 <div className="mt-2 flex items-end gap-2">
                   <div className="flex-1">
                     <SearchableDropdown
@@ -567,70 +601,99 @@ export default function RequestDetailPage() {
               {/* Description */}
               <div className="border-t border-gray-200 pt-3">
                 <h2 className="font-semibold text-sm text-gray-700 mb-2">Description</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
                     {isEditing ? (
-                      <div className="space-y-2">
+                      <div className="space-y-4">
                         <textarea
                           value={editedRequest.description}
                           onChange={(e) =>
                             setEditedRequest({ ...editedRequest, description: e.target.value })
                           }
-                          className="w-full border rounded-lg p-1.5 text-sm"
+                          className="w-full border rounded-lg p-3 text-sm min-h-[100px] focus:ring-2 focus:ring-blue-500 outline-none"
+                          placeholder="Update internal notes..."
                         />
 
-                        <button
-                          onClick={handleSave}
-                          disabled={saving}
-                          className="bg-blue-600 text-white px-3 py-1.5 text-sm rounded-lg disabled:opacity-50 flex items-center"
-                        >
-                          {saving ? "Saving..." : "Save Changes"}
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="bg-blue-600 text-white px-4 py-2 text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center"
+                          >
+                            {saving ? "Saving..." : "Save Changes"}
+                          </button>
+                          <button
+                            onClick={() => setIsEditing(false)}
+                            className="text-gray-600 px-4 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-600">
-                        {(() => {
-                          let desc = "";
-                          try {
-                            if (request.user_text) {
-                              if (typeof request.user_text === 'object') {
-                                desc = request.user_text.description || "";
-                              } else if (typeof request.user_text === 'string' && request.user_text.startsWith('{')) {
-                                desc = JSON.parse(request.user_text).description || "";
-                              }
-                            }
-                          } catch (e) {}
-                          return desc || request.notes || "Lorem ipsum dolor sit amet, consectetur adipiscing elit...";
-                        })()}
-                      </p>
+                      <div className="space-y-4">
+                          <div className="bg-white rounded-lg">
+                            <p className="text-sm text-gray-700 leading-relaxed font-medium">
+                              {(() => {
+                                let userText = request.user_text;
+                                if (typeof userText === 'string' && userText.startsWith('{')) {
+                                  try { userText = JSON.parse(userText); } catch (e) {}
+                                }
+                                
+                                const desc = userText?.description;
+                                return renderSafe(desc, "No description provided");
+                              })()}
+                            </p>
+                          </div>
+
+                        {/* Display Attributes if they exist */}
+                        {request.user_text?.attributes && typeof request.user_text.attributes === 'object' && Object.keys(request.user_text.attributes).length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+                            {Object.entries(request.user_text.attributes).map(([key, attr]) => (
+                              <div key={key} className="bg-gray-50/50 p-2 rounded-lg border border-gray-100 flex flex-col">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{key}</span>
+                                <span className="text-sm font-semibold text-gray-700">
+                                  {attr?.value || ''} <span className="text-gray-400 font-normal ml-0.5">{attr?.uom || ''}</span>
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Display internal notes as secondary info */}
+                        {request.notes && (
+                          <div className="mt-2 pt-3 border-t border-gray-100">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 text-blue-500">Internal Notes</p>
+                            <p className="text-sm text-gray-600 italic">&quot;{request.notes}&quot;</p>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
-                  {user?.role !== 'MDGT' && (
-                    <>
+                  {role !== 'MDGT' && (
+                    <div className="space-y-3">
                       {request?.type === 'material' && (
-                        <div className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-xs text-gray-500 uppercase font-medium mb-0.5">SAP Item</p>
-                          <p className="font-medium text-sm text-gray-800">{request.sap_item || "-"}</p>
+                        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">Assigned SAP Item</p>
+                          <p className="font-semibold text-sm text-gray-800">{request.sap_item || "Not Yet Assigned"}</p>
                         </div>
                       )}
                       {request?.type === 'material group' && (
-                        <div className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-xs text-gray-500 uppercase font-medium mb-0.5">Material Group</p>
-                          <p className="font-medium text-sm text-gray-800">{request.material_group || "-"}</p>
+                        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-1">Assigned Material Group</p>
+                          <p className="font-semibold text-sm text-gray-800">{request.material_group || "Not Yet Assigned"}</p>
                         </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
-            </div>
 
             {/* Conversation */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
               <h2 className="font-semibold text-sm text-gray-700 mb-2">Conversation</h2>
               <div className="space-y-2 mb-3">
-                {chatMessages.map((chat, index) => {
+                {Array.isArray(chatMessages) && chatMessages.map((chat, index) => {
                   const isCurrentUser = chat.sender === user?.emp_name;
 
                   return (
@@ -695,7 +758,7 @@ export default function RequestDetailPage() {
                   <div>
                     <p className="font-medium text-xs text-gray-700">Created</p>
                     <p className="text-xs">
-                      By {request.createdby || "Unknown"} on{" "}
+                      By {renderSafe(request.createdby, "Unknown")} on{" "}
                       {request.created ? new Date(request.created).toLocaleDateString("en-GB") : "-"}
                     </p>
                   </div>
@@ -725,7 +788,7 @@ export default function RequestDetailPage() {
                   <div>
                     <p className="font-medium text-xs text-gray-700">Updated</p>
                     <p className="text-xs">
-                      By {request.updatedby || "System"} on{" "}
+                      By {renderSafe(request.updatedby, "System")} on{" "}
                       {request.updated ? new Date(request.updated).toLocaleDateString("en-GB") : "-"}
                     </p>
                   </div>
@@ -768,7 +831,7 @@ export default function RequestDetailPage() {
                         onClick={handleSave}
                         className="bg-blue-600 text-white px-3 py-1.5 text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
                         disabled={
-                          user?.role === 'MDGT' &&
+                          role === 'MDGT' &&
                           editedRequest.status === 'Closed' &&
                           ((request?.type === 'material' && !request?.sap_item) ||
                             (request?.type === 'material group' && !request?.material_group))

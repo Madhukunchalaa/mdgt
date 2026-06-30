@@ -66,17 +66,18 @@ export default function SearchableDropdown({
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const [filteredOptions, setFilteredOptions] = useState(options);
+    const [filteredOptions, setFilteredOptions] = useState(Array.isArray(options) ? options : []);
     const dropdownRef = useRef(null);
 
     // Filter options based on search term
     useEffect(() => {
+        const safeOptions = Array.isArray(options) ? options : [];
         if (!searchTerm.trim()) {
-            setFilteredOptions(options);
+            setFilteredOptions(safeOptions);
         } else {
             const term = searchTerm.toLowerCase();
             setFilteredOptions(
-                options.filter((option) => {
+                safeOptions.filter((option) => {
                     const label = getOptionLabel(option).toLowerCase();
                     return label.includes(term);
                 })
@@ -103,9 +104,9 @@ export default function SearchableDropdown({
     }, [isOpen]);
 
     // Find selected option
-    const selectedOption = options.find(
-        (option) => getOptionValue(option) === value
-    );
+    const selectedOption = Array.isArray(options) 
+        ? options.find((option) => getOptionValue(option) === value)
+        : null;
 
     const handleSelect = (option) => {
         const optionValue = getOptionValue(option);

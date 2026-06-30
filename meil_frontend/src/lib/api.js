@@ -208,9 +208,10 @@ export const restoreCompany = (token, company_name) => {
 };
 
 // Requests API
-export const fetchRequests = (token) => {
+export const fetchRequests = (token, id = null) => {
     const axiosInstance = createAxiosInstance(token);
-    return axiosInstance.get("requests/list/").then(res => res.data);
+    const url = id ? `requests/${id}/` : "requests/list/";
+    return axiosInstance.get(url).then(res => res.data);
 };
 
 export const createRequest = (token, data) => {
@@ -258,6 +259,7 @@ export const fetchItemMasters = (token, options = {}) => {
     if (params.mgrp_code && params.mgrp_code !== 'all') queryParams.append('mgrp_code', params.mgrp_code || '');
     if (params.mat_type_code && params.mat_type_code !== 'all') queryParams.append('mat_type_code', params.mat_type_code || '');
     if (params.is_final !== undefined) queryParams.append('is_final', params.is_final);
+    if (params.search_type) queryParams.append('search_type', params.search_type);
     if (params.page) queryParams.append('page', params.page);
     if (params.page_size) queryParams.append('page_size', params.page_size || 25);
 

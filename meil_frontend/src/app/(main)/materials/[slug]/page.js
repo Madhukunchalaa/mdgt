@@ -11,6 +11,7 @@ export default function MaterialDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSearchQuery = searchParams.get("q") || "";
+  const urlItemId = searchParams.get("item") || "";
   const { token } = useAuth(); // Move useAuth before useEffect that uses token
   const [selectedItem, setSelectedItem] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -455,6 +456,20 @@ export default function MaterialDetailPage() {
     }
   };
 
+  // Auto-select item when coming from search results with a specific item ID
+  useEffect(() => {
+    if (!urlItemId || items.length === 0) return;
+    const target = items.find(
+      (i) => String(i.sap_id) === String(urlItemId) || String(i.local_item_id) === String(urlItemId)
+    );
+    if (target) setSelectedItem(target);
+  }, [urlItemId, items]);
+
+  // When a specific item was requested, only show that item in the list
+  const displayItems = urlItemId
+    ? items.filter((i) => String(i.sap_id) === String(urlItemId) || String(i.local_item_id) === String(urlItemId))
+    : items;
+
   // Handle item selection
   const handleItemSelect = (item) => {
     setSelectedItem(item);
@@ -540,7 +555,7 @@ export default function MaterialDetailPage() {
           {/* Items List - Left Column */}
           <div className="flex flex-col min-h-0">
             <h3 className="text-sm font-medium text-gray-700 mb-2">
-              Available Items {loadingItems ? "(Loading...)" : `(${items.length})`}
+              Available Items {loadingItems ? "(Loading...)" : `(${displayItems.length})`}
               {urlSearchQuery && !loadingItems && (
                 <span className="ml-2 text-xs text-blue-600 font-normal">filtered: &quot;{urlSearchQuery}&quot;</span>
               )}
@@ -551,7 +566,7 @@ export default function MaterialDetailPage() {
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
                   <p className="mt-1.5 text-xs">Loading items...</p>
                 </div>
-              ) : items.length === 0 ? (
+              ) : displayItems.length === 0 ? (
                 <div className="p-3 text-center text-gray-500">
                   <svg
                     className="mx-auto h-8 w-8 text-gray-400"
@@ -570,7 +585,7 @@ export default function MaterialDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {items.map((item) => (
+                  {displayItems.map((item) => (
                     <div
                       key={item.local_item_id || item.sap_id}
                       onClick={() => handleItemSelect(item)}
