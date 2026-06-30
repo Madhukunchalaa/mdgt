@@ -11,6 +11,34 @@ import BackButton from "@/components/BackButton";
 import SearchableDropdown from "@/components/SearchableDropdown";
 import { useSortableData } from "@/hooks/useSortableData";
 
+const FILTERED_VIEW_KEYS = ["BU", "EIL CODE", "TOYO CODE", "INVESCA CODE"];
+
+const filterHiddenAttributesFromLongName = (longName) => {
+  if (!longName) return "N/A";
+  return longName.split(',').map(p => p.trim()).filter(part => {
+    const key = part.split(':')[0].trim();
+    return !FILTERED_VIEW_KEYS.some(fk => fk.toLowerCase() === key.toLowerCase());
+  }).join(', ');
+};
+
+const filterHiddenAttributesFromShortName = (shortName, attributes) => {
+  if (!shortName) return "N/A";
+  if (!attributes) return shortName;
+  
+  const hiddenValues = FILTERED_VIEW_KEYS.map(key => {
+    const matchedKey = Object.keys(attributes).find(k => k.toLowerCase() === key.toLowerCase());
+    if (!matchedKey) return null;
+    const val = attributes[matchedKey];
+    return typeof val === 'object' ? val?.value : val;
+  }).filter(Boolean).map(v => String(v).trim().toLowerCase());
+  
+  if (hiddenValues.length === 0) return shortName;
+  
+  return shortName.split(',').map(p => p.trim()).filter(part => {
+    return !hiddenValues.includes(part.toLowerCase());
+  }).join(', ');
+};
+
 export default function MaterialsPage() {
   const [materials, setMaterials] = useState([]);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -1655,17 +1683,32 @@ export default function MaterialsPage() {
                     </div>
                   </div>
                   
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">BU</label>
+                    <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900">
+                      {(() => {
+                        const attrs = viewingMaterial.attributes || viewMaterialAttributes || {};
+                        const buKey = Object.keys(attrs).find(k => k.toLowerCase() === 'bu');
+                        if (!buKey || !attrs[buKey]) return "N/A";
+                        const buVal = attrs[buKey];
+                        const valString = typeof buVal === 'object' && buVal !== null && 'value' in buVal ? buVal.value : buVal;
+                        if (Array.isArray(valString)) return valString.join(', ');
+                        return valString ? String(valString) : "N/A";
+                      })()}
+                    </div>
+                  </div>
+                  
                   <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Short Name</label>
                     <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900 min-h-[50px]">
-                      {viewingMaterial.item_desc || viewingMaterial.short_name || "N/A"}
+                      {filterHiddenAttributesFromShortName(viewingMaterial.item_desc || viewingMaterial.short_name, viewingMaterial.attributes || viewMaterialAttributes)}
                     </div>
                   </div>
                   
                   <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Long Name</label>
                     <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900 min-h-[50px] break-words whitespace-normal">
-                      {viewingMaterial.long_name || viewingMaterial.notes || "N/A"}
+                      {filterHiddenAttributesFromLongName(viewingMaterial.long_name || viewingMaterial.notes)}
                     </div>
                   </div>
                   
