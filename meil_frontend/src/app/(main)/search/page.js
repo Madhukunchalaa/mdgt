@@ -6,6 +6,34 @@ import { useAuth } from "@/context/AuthContext";
 import SearchableDropdown from "@/components/SearchableDropdown";
 import { Loader2, Star, ChevronLeft, ChevronRight, Info } from "lucide-react";
 
+const FILTERED_VIEW_KEYS = ["BU", "EIL CODE", "TOYO CODE", "INVESCA CODE"];
+
+const filterHiddenAttributesFromLongName = (longName) => {
+  if (!longName) return "N/A";
+  return longName.split(',').map(p => p.trim()).filter(part => {
+    const key = part.split(':')[0].trim();
+    return !FILTERED_VIEW_KEYS.some(fk => fk.toLowerCase() === key.toLowerCase());
+  }).join(', ');
+};
+
+const filterHiddenAttributesFromShortName = (shortName, attributes) => {
+  if (!shortName) return "N/A";
+  if (!attributes) return shortName;
+  
+  const hiddenValues = FILTERED_VIEW_KEYS.map(key => {
+    const matchedKey = Object.keys(attributes).find(k => k.toLowerCase() === key.toLowerCase());
+    if (!matchedKey) return null;
+    const val = attributes[matchedKey];
+    return typeof val === 'object' ? val?.value : val;
+  }).filter(Boolean).map(v => String(v).trim().toLowerCase());
+  
+  if (hiddenValues.length === 0) return shortName;
+  
+  return shortName.split(',').map(p => p.trim()).filter(part => {
+    return !hiddenValues.includes(part.toLowerCase());
+  }).join(', ');
+};
+
 export default function MaterialSearchPage() {
   const router = useRouter();
 
@@ -1222,12 +1250,12 @@ export default function MaterialSearchPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-800 line-clamp-2">
-                            {item.short_name}
+                            {filterHiddenAttributesFromShortName(item.short_name, item.attributes)}
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-600 line-clamp-2">
-                            {item.long_name || <span className="text-gray-400 italic">No long description</span>}
+                            {item.long_name ? filterHiddenAttributesFromLongName(item.long_name) : <span className="text-gray-400 italic">No long description</span>}
                           </div>
                         </td>
                       </tr>
