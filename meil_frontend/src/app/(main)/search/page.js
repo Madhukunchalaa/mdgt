@@ -8,30 +8,56 @@ import { Loader2, Star, ChevronLeft, ChevronRight, Info } from "lucide-react";
 
 const FILTERED_VIEW_KEYS = ["BU", "EIL CODE", "TOYO CODE", "INVESCA CODE"];
 
-const filterHiddenAttributesFromLongName = (longName) => {
-  if (!longName) return "N/A";
-  return longName.split(',').map(p => p.trim()).filter(part => {
-    const key = part.split(':')[0].trim();
-    return !FILTERED_VIEW_KEYS.some(fk => fk.toLowerCase() === key.toLowerCase());
-  }).join(', ');
+const filterHiddenAttributesFromLongNameStr = (longName, attributes) => {
+  if (!longName || !attributes) return longName || "N/A";
+  let result = longName;
+  FILTERED_VIEW_KEYS.forEach(key => {
+    const matchedKey = Object.keys(attributes).find(k => k.toLowerCase() === key.toLowerCase());
+    if (matchedKey) {
+      const val = attributes[matchedKey];
+      const strVal = typeof val === 'object' ? val?.value : val;
+      if (strVal) {
+        const searchStr1 = `${matchedKey}: ${strVal}, `;
+        const searchStr2 = `, ${matchedKey}: ${strVal}`;
+        const searchStr3 = `${matchedKey}: ${strVal}`;
+        
+        if (result.includes(searchStr1)) {
+          result = result.replace(searchStr1, "");
+        } else if (result.includes(searchStr2)) {
+          result = result.replace(searchStr2, "");
+        } else if (result.includes(searchStr3)) {
+          result = result.replace(searchStr3, "");
+        }
+      }
+    }
+  });
+  return result;
 };
 
 const filterHiddenAttributesFromShortName = (shortName, attributes) => {
-  if (!shortName) return "N/A";
-  if (!attributes) return shortName;
-  
-  const hiddenValues = FILTERED_VIEW_KEYS.map(key => {
+  if (!shortName || !attributes) return shortName || "N/A";
+  let result = shortName;
+  FILTERED_VIEW_KEYS.forEach(key => {
     const matchedKey = Object.keys(attributes).find(k => k.toLowerCase() === key.toLowerCase());
-    if (!matchedKey) return null;
-    const val = attributes[matchedKey];
-    return typeof val === 'object' ? val?.value : val;
-  }).filter(Boolean).map(v => String(v).trim().toLowerCase());
-  
-  if (hiddenValues.length === 0) return shortName;
-  
-  return shortName.split(',').map(p => p.trim()).filter(part => {
-    return !hiddenValues.includes(part.toLowerCase());
-  }).join(', ');
+    if (matchedKey) {
+      const val = attributes[matchedKey];
+      const strVal = typeof val === 'object' ? val?.value : val;
+      if (strVal) {
+        const searchStr1 = `${strVal}, `;
+        const searchStr2 = `, ${strVal}`;
+        const searchStr3 = `${strVal}`;
+        
+        if (result.includes(searchStr1)) {
+          result = result.replace(searchStr1, "");
+        } else if (result.includes(searchStr2)) {
+          result = result.replace(searchStr2, "");
+        } else if (result.includes(searchStr3)) {
+          result = result.replace(searchStr3, "");
+        }
+      }
+    }
+  });
+  return result;
 };
 
 export default function MaterialSearchPage() {
@@ -1253,10 +1279,8 @@ export default function MaterialSearchPage() {
                             {filterHiddenAttributesFromShortName(item.short_name, item.attributes)}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-600 line-clamp-2">
-                            {item.long_name ? filterHiddenAttributesFromLongName(item.long_name) : <span className="text-gray-400 italic">No long description</span>}
-                          </div>
+                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-normal min-w-[200px]">
+                          {item.long_name ? filterHiddenAttributesFromLongNameStr(item.long_name, item.attributes) : <span className="text-gray-400 italic">No long description</span>}
                         </td>
                       </tr>
                     );

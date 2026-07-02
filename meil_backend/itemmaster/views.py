@@ -18,6 +18,9 @@ from Common.Middleware import authenticate, restrict
 def get_employee_name(emp):
     return emp.emp_name if emp else None
 
+# Keys that should not be visible in short/long names but remain in attributes for search
+FILTERED_KEYS = ["bu", "eil code", "toyo code", "invesca code"]
+
 # Helper function to format short_name: SAP Description + attribute values
 def format_short_name(sap_name, attributes):
     """Format short_name as 'SAP Description, val1, val2' """
@@ -25,7 +28,9 @@ def format_short_name(sap_name, attributes):
     if sap_name:
         parts.append(str(sap_name))
     if attributes and isinstance(attributes, dict):
-        for v in attributes.values():
+        for k, v in attributes.items():
+            if str(k).lower() in FILTERED_KEYS:
+                continue
             if isinstance(v, dict):
                 val = v.get("value", "")
             else:
@@ -46,6 +51,8 @@ def format_long_name(sap_name, mgrp_code, mgrp_long_name, attributes):
         parts.append(str(mgrp_long_name))
     if attributes and isinstance(attributes, dict):
         for k, v in attributes.items():
+            if str(k).lower() in FILTERED_KEYS:
+                continue
             if isinstance(v, dict):
                 val = v.get("value", "")
             else:
@@ -129,7 +136,9 @@ def create_itemmaster(request):
         invalid_fields = []
 
         for key, value in selected_attributes.items():
-            if key not in allowed_attrs:
+            if key.upper() == 'BU':
+                pass # Allow BU attribute universally
+            elif key not in allowed_attrs:
                 invalid_fields.append(f"'{key}' is not defined for MatGroup {mgrp_code}")
             else:
                 # Extract base value (remove UOM if present)
@@ -323,7 +332,8 @@ def list_itemmasters(request):
         search_filter = Q(sap_name__icontains=search_query) | \
                         Q(short_name__icontains=search_query) | \
                         Q(long_name__icontains=search_query) | \
-                        Q(search_text__icontains=search_query)
+                        Q(search_text__icontains=search_query) | \
+                        Q(attributes__icontains=search_query)
         if search_query.isdigit():
             search_filter |= Q(sap_item_id__icontains=search_query)
         items_qs = items_qs.filter(search_filter)
@@ -453,7 +463,9 @@ def update_itemmaster(request, local_item_id):
             invalid_fields = []
 
             for key, value in selected_attributes.items():
-                if key not in allowed_attrs:
+                if key.upper() == 'BU':
+                    pass # Allow BU universally
+                elif key not in allowed_attrs:
                     invalid_fields.append(f"{key} not defined")
 
             if invalid_fields:

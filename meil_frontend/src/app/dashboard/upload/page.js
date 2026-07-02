@@ -234,10 +234,10 @@ export default function UploadPage() {
                                     {templateLabels[tpl] ?? tpl}
                                 </option>
                             ))}
+                        </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 md:mr-48">
                             <ChevronDown className="h-5 w-5 text-gray-400" />
                         </div>
-                        </select>
                     </div>
                 </div>
 

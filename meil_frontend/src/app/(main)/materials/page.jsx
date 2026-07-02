@@ -15,28 +15,81 @@ const FILTERED_VIEW_KEYS = ["BU", "EIL CODE", "TOYO CODE", "INVESCA CODE"];
 
 const filterHiddenAttributesFromLongName = (longName) => {
   if (!longName) return "N/A";
-  return longName.split(',').map(p => p.trim()).filter(part => {
-    const key = part.split(':')[0].trim();
-    return !FILTERED_VIEW_KEYS.some(fk => fk.toLowerCase() === key.toLowerCase());
-  }).join(', ');
+  let filtered = longName;
+  FILTERED_VIEW_KEYS.forEach(key => {
+    // Regex to match "KEY: value" where value might contain commas.
+    // It stops when it hits another known key (like "STANDARD:") or end of string.
+    // Instead of complex regex, we can split by ", " and manually rebuild it.
+    // However, it's safer to just check if the string starts with a hidden key and remove it.
+  });
+  
+  // A robust way to split long name:
+  // It's formatted like "SAP_DESC, MGRP_CODE, MGRP_LONG, ATTR1: VAL1, ATTR2: VAL2"
+  const parts = longName.split(',').map(p => p.trim());
+  
+  // Actually, wait. If an attribute value contains a comma (like "Transportation, Nuclear"),
+  // the backend format_long_name outputs: "BU: Transportation, Nuclear"
+  // When split by comma, we get `["BU: Transportation", "Nuclear"]`.
+  // So "Nuclear" looks like a standalone value without a key!
+  // This makes it extremely hard to reliably filter out on the frontend.
+  // We can filter out exact substrings from the original string instead!
+  
+  return longName;
+};
+
+// Actually, let's write a better string replacement for both short and long names.
+const filterHiddenAttributesFromLongNameStr = (longName, attributes) => {
+  if (!longName || !attributes) return longName || "N/A";
+  let result = longName;
+  FILTERED_VIEW_KEYS.forEach(key => {
+    const matchedKey = Object.keys(attributes).find(k => k.toLowerCase() === key.toLowerCase());
+    if (matchedKey) {
+      const val = attributes[matchedKey];
+      const strVal = typeof val === 'object' ? val?.value : val;
+      if (strVal) {
+        // Remove "KEY: VALUE, " or ", KEY: VALUE"
+        const searchStr1 = `${matchedKey}: ${strVal}, `;
+        const searchStr2 = `, ${matchedKey}: ${strVal}`;
+        const searchStr3 = `${matchedKey}: ${strVal}`;
+        
+        if (result.includes(searchStr1)) {
+          result = result.replace(searchStr1, "");
+        } else if (result.includes(searchStr2)) {
+          result = result.replace(searchStr2, "");
+        } else if (result.includes(searchStr3)) {
+          result = result.replace(searchStr3, "");
+        }
+      }
+    }
+  });
+  return result;
 };
 
 const filterHiddenAttributesFromShortName = (shortName, attributes) => {
-  if (!shortName) return "N/A";
-  if (!attributes) return shortName;
-  
-  const hiddenValues = FILTERED_VIEW_KEYS.map(key => {
+  if (!shortName || !attributes) return shortName || "N/A";
+  let result = shortName;
+  FILTERED_VIEW_KEYS.forEach(key => {
     const matchedKey = Object.keys(attributes).find(k => k.toLowerCase() === key.toLowerCase());
-    if (!matchedKey) return null;
-    const val = attributes[matchedKey];
-    return typeof val === 'object' ? val?.value : val;
-  }).filter(Boolean).map(v => String(v).trim().toLowerCase());
-  
-  if (hiddenValues.length === 0) return shortName;
-  
-  return shortName.split(',').map(p => p.trim()).filter(part => {
-    return !hiddenValues.includes(part.toLowerCase());
-  }).join(', ');
+    if (matchedKey) {
+      const val = attributes[matchedKey];
+      const strVal = typeof val === 'object' ? val?.value : val;
+      if (strVal) {
+        // Remove "VALUE, " or ", VALUE"
+        const searchStr1 = `${strVal}, `;
+        const searchStr2 = `, ${strVal}`;
+        const searchStr3 = `${strVal}`;
+        
+        if (result.includes(searchStr1)) {
+          result = result.replace(searchStr1, "");
+        } else if (result.includes(searchStr2)) {
+          result = result.replace(searchStr2, "");
+        } else if (result.includes(searchStr3)) {
+          result = result.replace(searchStr3, "");
+        }
+      }
+    }
+  });
+  return result;
 };
 
 export default function MaterialsPage() {
@@ -63,6 +116,7 @@ export default function MaterialsPage() {
   const [tableTab, setTableTab] = useState("raw"); // "raw" or "cleaned"
   const [duplicateMaterials, setDuplicateMaterials] = useState(null); // Store duplicate materials info
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [isBuDropdownOpen, setIsBuDropdownOpen] = useState(false);
   
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -87,6 +141,7 @@ export default function MaterialsPage() {
     uom: "",
     attributes: {},
     is_final: false,
+    bu: [],
   });
   const {user,token,role,checkPermission} = useAuth();
   useEffect(() => {
@@ -304,6 +359,7 @@ export default function MaterialsPage() {
       search_text: "",
       attributes: {},
       is_final: false,
+      bu: [],
     });
     setMaterialAttributes({});
     setActiveTab("general");
@@ -325,6 +381,19 @@ export default function MaterialsPage() {
 
   const handleEdit = (material) => {
     setEditingMaterial(material);
+    const buKey = Object.keys(material.attributes || {}).find(k => k.toLowerCase() === 'bu');
+    let initialBu = [];
+    if (buKey) {
+      const buVal = material.attributes[buKey];
+      if (typeof buVal === 'object' && buVal?.value) {
+        initialBu = Array.isArray(buVal.value) ? buVal.value : String(buVal.value).split(',').map(s => s.trim());
+      } else if (Array.isArray(buVal)) {
+        initialBu = buVal.map(s => String(s).trim());
+      } else if (typeof buVal === 'string') {
+        initialBu = buVal.split(',').map(s => s.trim());
+      }
+    }
+
     setFormData({
       sap_item_id: material.sap_item_id != null ? String(material.sap_item_id) : "",
       sap_name: material.sap_name || "",
@@ -337,6 +406,7 @@ export default function MaterialsPage() {
       uom: material.uom || "",
       attributes: material.attributes || {},
       is_final: material.is_final || false,
+      bu: initialBu,
     });
     // Reset custom values and validation errors
     setCustomAttributeValues({});
@@ -602,12 +672,22 @@ export default function MaterialsPage() {
       // Prepare form data - ensure all required fields are properly formatted
       // If item_desc is empty but attributes are filled, send a placeholder
       // (backend will auto-generate from attributes and replace the placeholder)
+      const finalAttributes = { ...(formData.attributes || {}) };
+      if (formData.bu && formData.bu.length > 0) {
+        finalAttributes['BU'] = [...formData.bu].sort((a,b) => a.localeCompare(b)).join(', ');
+      } else {
+        delete finalAttributes['BU'];
+        delete finalAttributes['bu'];
+      }
+
       const dataToSend = {
         ...formData,
+        attributes: finalAttributes,
         mat_type_code: hasMatType ? String(formData.mat_type_code).trim() : formData.mat_type_code,
         mgrp_code: hasMgrpCode ? String(formData.mgrp_code).trim() : formData.mgrp_code,
         item_desc: hasItemDesc ? formData.item_desc.trim() : (hasAttributes ? "Auto-generated" : formData.item_desc)
       };
+      delete dataToSend.bu;
 
       let response;
       if (editingMaterial) {
@@ -1270,6 +1350,42 @@ export default function MaterialsPage() {
                         ))}
                     </select>
                   </div>
+
+                  <div className="relative">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">BU (Business Unit)</label>
+                    <div 
+                      className="w-full px-3 py-1.5 text-sm border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-background text-foreground cursor-pointer min-h-[38px] flex items-center justify-between"
+                      onClick={() => setIsBuDropdownOpen(!isBuDropdownOpen)}
+                    >
+                      <span className="truncate">
+                        {formData.bu && formData.bu.length > 0 ? [...formData.bu].sort((a,b) => a.localeCompare(b)).join(', ') : <span className="opacity-80">Select BU...</span>}
+                      </span>
+                      <span className="opacity-80 text-xs pl-2">▼</span>
+                    </div>
+                    {isBuDropdownOpen && (
+                      <div className="absolute z-10 w-full mt-1 bg-background text-foreground border border-gray-500 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {["BD&P", "Gas", "Hydrocarbon", "Irrigation", "Nuclear", "Transportation", "Water"].map((option) => (
+                          <label key={option} className="flex items-center px-3 py-2 hover:bg-gray-500/20 cursor-pointer border-b border-gray-500/30 last:border-0">
+                            <input 
+                              type="checkbox" 
+                              className="mr-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                              checked={(formData.bu || []).includes(option)}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setFormData(prev => ({
+                                  ...prev, 
+                                  bu: checked 
+                                    ? [...(prev.bu || []), option].sort((a,b) => a.localeCompare(b))
+                                    : (prev.bu || []).filter(v => v !== option)
+                                }));
+                              }}
+                            />
+                            <span className="text-sm">{option}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   
                   <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Short Name *</label>
@@ -1692,8 +1808,8 @@ export default function MaterialsPage() {
                         if (!buKey || !attrs[buKey]) return "N/A";
                         const buVal = attrs[buKey];
                         const valString = typeof buVal === 'object' && buVal !== null && 'value' in buVal ? buVal.value : buVal;
-                        if (Array.isArray(valString)) return valString.join(', ');
-                        return valString ? String(valString) : "N/A";
+                        const arr = Array.isArray(valString) ? valString : (valString ? String(valString).split(',').map(s => s.trim()).filter(Boolean) : []);
+                        return arr.length > 0 ? arr.sort((a,b) => a.localeCompare(b)).join(', ') : "N/A";
                       })()}
                     </div>
                   </div>
@@ -1708,7 +1824,7 @@ export default function MaterialsPage() {
                   <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Long Name</label>
                     <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900 min-h-[50px] break-words whitespace-normal">
-                      {filterHiddenAttributesFromLongName(viewingMaterial.long_name || viewingMaterial.notes)}
+                      {filterHiddenAttributesFromLongNameStr(viewingMaterial.long_name || viewingMaterial.notes, viewingMaterial.attributes || viewMaterialAttributes)}
                     </div>
                   </div>
                   

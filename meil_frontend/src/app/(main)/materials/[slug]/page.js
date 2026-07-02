@@ -153,18 +153,20 @@ export default function MaterialDetailPage() {
                 notes: item.notes || item.long_name,
                 mgrp_code: mgrpCode || slug, // Ensure it matches the slug
                 mat_type_code: matTypeCode,
+                attributes: item.attributes,
               };
             })
             .filter(item => {
               // Double-check: only include items that match the selected material group
               if (item.mgrp_code !== slug) return false;
-              // If a search query was passed from the search page, filter items by it
               if (urlSearchQuery) {
                 const q = urlSearchQuery.toLowerCase();
-                return (
+                const hasMatch = (
                   (item.item_desc || "").toLowerCase().includes(q) ||
-                  (item.notes || "").toLowerCase().includes(q)
+                  (item.notes || "").toLowerCase().includes(q) ||
+                  (item.attributes ? JSON.stringify(item.attributes).toLowerCase().includes(q) : false)
                 );
+                return hasMatch;
               }
               return true;
             });
@@ -279,7 +281,8 @@ export default function MaterialDetailPage() {
           (item.item_desc && item.item_desc.toLowerCase().includes(query)) ||
           (item.sap_id && item.sap_id.toString().toLowerCase().includes(query)) ||
           (item.local_item_id && item.local_item_id.toString().toLowerCase().includes(query)) ||
-          (item.notes && item.notes.toLowerCase().includes(query))
+          (item.notes && item.notes.toLowerCase().includes(query)) ||
+          (item.attributes ? JSON.stringify(item.attributes).toLowerCase().includes(query) : false)
         );
       });
       setSearchResults(filtered);

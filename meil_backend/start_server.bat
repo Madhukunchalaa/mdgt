@@ -8,10 +8,10 @@ echo IMPORTANT: Use Daphne instead of 'python manage.py runserver' for WebSocket
 echo.
 
 REM Start with Daphne (ASGI server)
-daphne -b 0.0.0.0 -p 8000 core.asgi:application
+daphne -b 0.0.0.0 -p 8001 core.asgi:application
 
 REM Alternative: If you want to use runserver (no WebSocket support):
-REM python manage.py runserver 0.0.0.0:8000
+REM python manage.py runserver 0.0.0.0:8001
 
 pause
 
