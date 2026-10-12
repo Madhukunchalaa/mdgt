@@ -83,19 +83,21 @@ class Command(BaseCommand):
         # 3. Roles
         roles = {}
         for rd in ROLES:
-            role, created = UserRole.objects.get_or_create(
-                role_name=rd["role_name"],
-                defaults={
-                    "role_priority": rd["role_priority"],
-                    "can_create": rd["can_create"],
-                    "can_update": rd["can_update"],
-                    "can_delete": rd["can_delete"],
-                    "can_export": rd["can_export"],
-                    "is_deleted": False,
-                },
-            )
+            role = UserRole.objects.filter(role_name__iexact=rd["role_name"], is_deleted=False).first()
+            if not role:
+                role = UserRole.objects.create(
+                    role_name=rd["role_name"],
+                    role_priority=rd["role_priority"],
+                    can_create=rd["can_create"],
+                    can_update=rd["can_update"],
+                    can_delete=rd["can_delete"],
+                    can_export=rd["can_export"],
+                    is_deleted=False,
+                )
+                self._log("Role", rd["role_name"], True)
+            else:
+                self._log("Role", rd["role_name"], False)
             roles[rd["role_name"]] = role
-            self._log("Role", rd["role_name"], created)
 
         # 4. Employees — one per role
         for ud in DEFAULT_USERS:

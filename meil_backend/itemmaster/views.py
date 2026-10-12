@@ -11,6 +11,7 @@ from Employee.models import Employee
 from MaterialType.models import MaterialType
 from matgroups.models import MatGroup
 from matg_attributes.models import MatgAttributeItem  # NEW model
+from matg_attributes import catalog
 from Common.Middleware import authenticate, restrict
 
 
@@ -244,6 +245,10 @@ def create_itemmaster(request):
         # Get mgrp_long_name from MatGroup
         mgrp_long_name = mat_group.mgrp_longname if mat_group else None
 
+        # Put attributes in characteristic SEQUENCE order, then build the Catalog Number
+        selected_attributes = catalog.order_attributes(mat_group, selected_attributes)
+        catalog_info = catalog.catalog_breakdown(mat_group, selected_attributes)
+
         # Format short_name: SAP Description + attribute values
         formatted_short_name = format_short_name(sap_name, selected_attributes if selected_attributes and any(selected_attributes.values()) else None)
         if not formatted_short_name or len(formatted_short_name) < 3:
@@ -269,6 +274,7 @@ def create_itemmaster(request):
             search_text=search_text,
             uom=item_uom,
             attributes=selected_attributes,
+            catalog_number=catalog_info["catalog_number"],
             createdby=employee,
             updatedby=employee
         )
@@ -286,6 +292,8 @@ def create_itemmaster(request):
             "notes": item.long_name,
             "long_name": item.long_name,
             "search_text": item.search_text,
+            "catalog_number": item.catalog_number,
+            "catalog_warnings": catalog_info["warnings"],
             "uom": item.uom,
             "is_final": item.is_final,
             "created": item.created.strftime("%Y-%m-%d %H:%M:%S"),
@@ -333,9 +341,15 @@ def list_itemmasters(request):
                         Q(short_name__icontains=search_query) | \
                         Q(long_name__icontains=search_query) | \
                         Q(search_text__icontains=search_query) | \
+                        Q(catalog_number__icontains=search_query) | \
                         Q(attributes__icontains=search_query)
         if search_query.isdigit():
             search_filter |= Q(sap_item_id__icontains=search_query)
+            if len(search_query) % 2 != 0:
+                search_filter |= Q(catalog_number__icontains="0" + search_query)
+            stripped = search_query.lstrip("0")
+            if stripped and stripped != search_query:
+                search_filter |= Q(catalog_number__icontains=stripped)
         items_qs = items_qs.filter(search_filter)
 
     if mgrp_code and mgrp_code.lower() != 'all':
@@ -353,7 +367,7 @@ def list_itemmasters(request):
     # Order results - consistent ordering is required for pagination
     items_qs = items_qs.select_related('mat_type_code', 'mgrp_code', 'createdby', 'updatedby').only(
         'local_item_id', 'sap_item_id', 'sap_name', 'short_name', 'long_name',
-        'mgrp_long_name', 'search_text', 'uom', 'attributes', 'is_final',
+        'mgrp_long_name', 'search_text', 'catalog_number', 'uom', 'attributes', 'is_final',
         'is_deleted', 'created', 'updated',
         'mat_type_code__mat_type_code',
         'mgrp_code__mgrp_code',
@@ -393,6 +407,7 @@ def list_itemmasters(request):
             "notes": long_name,
             "long_name": long_name,
             "search_text": item.search_text,
+            "catalog_number": item.catalog_number,
             "uom": item.uom,
             "is_final": item.is_final,
             "is_deleted": item.is_deleted,
@@ -542,7 +557,12 @@ def update_itemmaster(request, local_item_id):
         if "is_final" in data:
             item.is_final = data.get("is_final", False)
 
-        # Always rebuild short_name and long_name so SAP description changes are reflected
+        # Always rebuild short_name and long_name so SAP description changes are reflected.
+        # Attributes are put in characteristic SEQUENCE order first, so the description and the
+        # Catalog Number are always built in the same order.
+        item.attributes = catalog.order_attributes(item.mgrp_code, item.attributes)
+        catalog_info = catalog.catalog_breakdown(item.mgrp_code, item.attributes)
+        item.catalog_number = catalog_info["catalog_number"]
         rebuilt_short = format_short_name(item.sap_name, item.attributes)
         if rebuilt_short and len(rebuilt_short) >= 3:
             item.short_name = rebuilt_short
@@ -573,6 +593,8 @@ def update_itemmaster(request, local_item_id):
             "notes": item.long_name,
             "long_name": item.long_name,
             "search_text": item.search_text,
+            "catalog_number": item.catalog_number,
+            "catalog_warnings": catalog_info["warnings"],
             "uom": item.uom,
             "is_final": item.is_final,
             "updated": item.updated.strftime("%Y-%m-%d %H:%M:%S"),

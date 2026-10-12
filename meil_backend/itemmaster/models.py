@@ -103,6 +103,9 @@ class ItemMaster(models.Model):
         help_text="Stores selected attribute values for this material, based on MatGroup's attribute definitions"
     )
 
+    # CMT Codes of the selected characteristic values, joined in sequence order
+    catalog_number = models.CharField(max_length=100, null=True, blank=True, db_index=True)
+
     # -----------------------------
     # 🆕 NEW BOOLEAN FIELD
     # -----------------------------

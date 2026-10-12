@@ -33,21 +33,37 @@ def search_groups(request):
         base_qs = base_qs.filter(search_type=search_type)
 
     # Primary: icontains across group fields and related item fields (always works on any PG)
-    matched_groups = base_qs.filter(
+    query_filters = (
         models.Q(mgrp_code__icontains=query) |
         models.Q(mgrp_shortname__icontains=query) |
         models.Q(mgrp_longname__icontains=query) |
         models.Q(items__is_deleted=False, items__short_name__icontains=query) |
         models.Q(items__is_deleted=False, items__long_name__icontains=query) |
-        models.Q(items__is_deleted=False, items__search_text__icontains=query)
-    ).distinct()
+        models.Q(items__is_deleted=False, items__search_text__icontains=query) |
+        models.Q(items__is_deleted=False, items__catalog_number__icontains=query)
+    )
+    if query.isdigit():
+        if len(query) % 2 != 0:
+            query_filters |= models.Q(items__is_deleted=False, items__catalog_number__icontains="0" + query)
+        stripped = query.lstrip("0")
+        if stripped and stripped != query:
+            query_filters |= models.Q(items__is_deleted=False, items__catalog_number__icontains=stripped)
+
+    matched_groups = base_qs.filter(query_filters).distinct()
 
     # Count matching items per group (always reliable, no pg_trgm needed)
     item_q = (
         models.Q(short_name__icontains=query) |
         models.Q(long_name__icontains=query) |
-        models.Q(search_text__icontains=query)
+        models.Q(search_text__icontains=query) |
+        models.Q(catalog_number__icontains=query)
     )
+    if query.isdigit():
+        if len(query) % 2 != 0:
+            item_q |= models.Q(catalog_number__icontains="0" + query)
+        stripped = query.lstrip("0")
+        if stripped and stripped != query:
+            item_q |= models.Q(catalog_number__icontains=stripped)
 
     def get_hit_count(group):
         return ItemMaster.objects.filter(mgrp_code=group, is_deleted=False).filter(item_q).count()
@@ -57,6 +73,7 @@ def search_groups(request):
         search_vector = (
             SearchVector("items__short_name", weight="A") +
             SearchVector("items__long_name", weight="A") +
+            SearchVector("items__catalog_number", weight="A") +
             SearchVector("items__search_text", weight="B") +
             SearchVector("mgrp_shortname", weight="B") +
             SearchVector("mgrp_longname", weight="B")

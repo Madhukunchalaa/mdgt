@@ -26,7 +26,14 @@ class MatgAttributeItem(models.Model):
         help_text="UOM for numeric dropdown attributes (optional)"
     )
 
-    # Optional sorting priority
+    # 2-digit numeric CMT Code for each value, e.g. {"FLANGE": "01", "PIPE": "02"}
+    cmt_codes = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="CMT Code (exactly 2 digits) for every possible value"
+    )
+
+    # Sequence of this characteristic inside its material group (unique per group)
     print_priority = models.IntegerField(null=True, blank=True)
 
     # Optional validation if needed

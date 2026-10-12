@@ -11,6 +11,7 @@ from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from Employee.models import Employee
+from matg_attributes import catalog
 
 
 # -------------------------------------------------------------------
@@ -238,6 +239,7 @@ def handle_itemmaster_phase_1(data, request):
                 sap_name=sap_name,
                 search_text=search_text,
                 attributes=attributes,
+                catalog_number=catalog.build_catalog_number(mgrp_code, attributes),
                 item_type=item_type,
                 item_number=item_number,
                 moc=moc,
@@ -422,7 +424,9 @@ def handle_itemmaster_phase_2(data, request):
                     else:
                         unchanged += 1
 
+                attributes = catalog.order_attributes(item.mgrp_code, attributes)
                 item.attributes = attributes
+                item.catalog_number = catalog.build_catalog_number(item.mgrp_code, attributes)
                 rebuilt = format_short_name(item.sap_name, attributes)
                 if rebuilt and len(rebuilt) >= 3:
                     item.short_name = rebuilt[:40]
@@ -541,7 +545,9 @@ def handle_itemmaster_phase_2(data, request):
                 unchanged += 1
 
             # Update item attributes and rebuild short_name
+            attributes = catalog.order_attributes(item.mgrp_code, attributes)
             item.attributes = attributes
+            item.catalog_number = catalog.build_catalog_number(item.mgrp_code, attributes)
             rebuilt = format_short_name(item.sap_name, attributes)
             if rebuilt and len(rebuilt) >= 3:
                 item.short_name = rebuilt[:40]
@@ -713,70 +719,99 @@ def handle_generic_model_upload(data, request, Model, model_name):
 # Handler: MatgAttributeItem Phase 1 — Insert Allowed Values + UOMs
 # -------------------------------------------------------------------
 def handle_matgattribute_phase_1(data, request):
+    """
+    Characteristic upload.
+
+    Excel format: one row per characteristic.
+      * possible_values : comma separated, e.g.  FLANGE, PIPE, ELBOW
+      * cmt_codes       : comma separated, SAME ORDER as possible_values, e.g.  01, 02, 03
+                          (also accepted:  FLANGE=01, PIPE=02, ELBOW=03)
+    Every value must have a 2-digit code, and the Sequence must be unique in the material group.
+    """
     from matg_attributes.models import MatgAttributeItem
     from matgroups.models import MatGroup
 
     inserted = 0
     updated = 0
     errors = []
+    seq_used = {}   # (mgrp pk, sequence) -> attribute name, for rows earlier in THIS file
 
-    # Helper function to get value by multiple possible keys (handles different header formats)
     def get_value(row, possible_keys):
         for key in possible_keys:
-            if key in row and row[key] and str(row[key]).strip():
+            if key in row and row[key] is not None and str(row[key]).strip():
                 return str(row[key]).strip()
         return None
 
-    for idx, row in enumerate(data, start=2):  # start=2 because row 1 is header
+    def parse_codes(codes_str, values):
+        """Return {value: code}. Accepts 'v=cc' pairs or a positional list."""
+        if not codes_str:
+            return {}
+        parts = [x.strip() for x in codes_str.split(",") if x.strip()]
+        if parts and all("=" in x for x in parts):
+            out = {}
+            for x in parts:
+                k, v = x.split("=", 1)
+                out[k.strip()] = v.strip()
+            return out
+        if len(parts) != len(values):
+            raise ValueError(
+                f"Number of CMT Codes ({len(parts)}) must match number of possible values ({len(values)})"
+            )
+        return dict(zip(values, parts))
+
+    for idx, row in enumerate(data, start=2):  # row 1 is the header
         try:
-            # Get mgrp_code (handle different header formats)
             mgrp_code_value = get_value(row, ["mgrp_code", "Mgrp Code", "mgrp code", "MGRP_CODE"])
-            mgrp_code = None
-            if mgrp_code_value:
-                mgrp_code = MatGroup.objects.filter(mgrp_code=mgrp_code_value).first()
-                if not mgrp_code:
-                    errors.append({"row": idx, "error": f"MatGroup '{mgrp_code_value}' not found"})
-                    continue
-            else:
+            if not mgrp_code_value:
                 errors.append({"row": idx, "error": "mgrp_code is required"})
                 continue
+            mgrp_code = MatGroup.objects.filter(mgrp_code=mgrp_code_value).first()
+            if not mgrp_code:
+                errors.append({"row": idx, "error": f"MatGroup '{mgrp_code_value}' not found"})
+                continue
 
-            # Get attribute_name (handle different header formats)
             attribute_name = get_value(row, ["attribute_name", "Attribute Name", "attribute name", "ATTRIBUTE_NAME"])
             if not attribute_name:
                 errors.append({"row": idx, "error": "attribute_name is required"})
                 continue
 
-            # Get possible_values (handle different header formats)
             possible_values_str = get_value(row, ["possible_values", "Possible Values", "possible values", "POSSIBLE_VALUES"])
-            possible_vals = []
-            if possible_values_str:
-                possible_vals = [
-                    x.strip() for x in possible_values_str.split(",")
-                    if x.strip()
-                ]
+            possible_vals = [x.strip() for x in possible_values_str.split(",") if x.strip()] if possible_values_str else []
 
-            # Get uom (handle different header formats)
-            uom_str = get_value(row, ["uom", "Uom", "UOM", "Unit Of Measure"])
-            uom = uom_str if uom_str else None
-
-            # Get print_priority (handle different header formats)
-            print_priority_str = get_value(row, ["print_priority", "Print Priority", "print priority", "PRINT_PRIORITY"])
-            print_priority = None
-            if print_priority_str:
-                try:
-                    print_priority = int(float(print_priority_str))
-                except (ValueError, TypeError):
-                    print_priority = None
-
-            # Get validation (handle different header formats)
+            uom = get_value(row, ["uom", "Uom", "UOM", "Unit Of Measure"])
             validation = get_value(row, ["validation", "Validation", "VALIDATION"])
 
-            # Check if this attribute already exists (even if deleted)
-            existing = MatgAttributeItem.objects.filter(
-                mgrp_code=mgrp_code,
-                attribute_name=attribute_name
-            ).first()
+            # ---- Sequence (required, positive whole number, unique per material group)
+            seq_str = get_value(row, ["print_priority", "Print Priority", "print priority", "PRINT_PRIORITY", "sequence", "Sequence"])
+            try:
+                print_priority = catalog.parse_sequence(seq_str)
+            except ValueError as exc:
+                errors.append({"row": idx, "error": str(exc)})
+                continue
+
+            earlier = seq_used.get((mgrp_code.pk, print_priority))
+            if earlier:
+                errors.append({"row": idx, "error": f"Sequence {print_priority} is used twice in this file ('{earlier}' and '{attribute_name}') for {mgrp_code.mgrp_code}"})
+                continue
+            clash = catalog.find_sequence_conflict(mgrp_code, print_priority)
+            if clash:
+                errors.append({"row": idx, "error": f"Sequence {print_priority} is already assigned to '{clash.attribute_name}' in {mgrp_code.mgrp_code}"})
+                continue
+
+            # ---- CMT codes (mandatory for every value)
+            codes_str = get_value(row, ["cmt_codes", "CMT Codes", "Cmt Codes", "cmt codes", "CMT Code", "cmt_code", "CMT_CODES"])
+            try:
+                raw_codes = parse_codes(codes_str, possible_vals)
+            except ValueError as exc:
+                errors.append({"row": idx, "error": str(exc)})
+                continue
+            # pad_single_digit: Excel turns the text 01 into the number 1
+            clean_codes, code_errors = catalog.validate_cmt_codes(possible_vals, raw_codes, pad_single_digit=True)
+            if code_errors:
+                errors.append({"row": idx, "error": "; ".join(code_errors)})
+                continue
+
+            existing = MatgAttributeItem.objects.filter(mgrp_code=mgrp_code, attribute_name=attribute_name).first()
             if existing:
                 errors.append({"row": idx, "error": f"Data is already loaded for attribute '{attribute_name}' in this material group."})
                 continue
@@ -785,17 +820,18 @@ def handle_matgattribute_phase_1(data, request):
                 mgrp_code=mgrp_code,
                 attribute_name=attribute_name,
                 possible_values=possible_vals,
+                cmt_codes=clean_codes,
                 uom=uom,
                 print_priority=print_priority,
                 validation=validation,
                 is_deleted=False,
             )
+            seq_used[(mgrp_code.pk, print_priority)] = attribute_name
             inserted += 1
 
         except Exception as e:
             errors.append({"row": idx, "error": f"{str(e)}"})
 
-    # Populate final row_results
     row_results = []
     errors_dict = {e['row']: e['error'] for e in errors}
     for i in range(len(data)):
@@ -1371,6 +1407,7 @@ def generate_matgattribute_template(Model):
             "mgrp_code": "GRP001",
             "attribute_name": "Color",
             "possible_values": "Red, Blue, Green, Yellow",
+            "cmt_codes": "01, 02, 03, 04",
             "uom": "",
             "print_priority": "1",
             "validation": ""
@@ -1379,6 +1416,7 @@ def generate_matgattribute_template(Model):
             "mgrp_code": "GRP001",
             "attribute_name": "Size",
             "possible_values": "Small, Medium, Large, XL",
+            "cmt_codes": "01, 02, 03, 04",
             "uom": "",
             "print_priority": "2",
             "validation": ""
@@ -1387,6 +1425,7 @@ def generate_matgattribute_template(Model):
             "mgrp_code": "GRP002",
             "attribute_name": "Weight",
             "possible_values": "1kg, 2kg, 5kg, 10kg",
+            "cmt_codes": "01, 02, 03, 04",
             "uom": "kg",
             "print_priority": "1",
             "validation": ""

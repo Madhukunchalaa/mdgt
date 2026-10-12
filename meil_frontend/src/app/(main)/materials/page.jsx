@@ -322,7 +322,7 @@ export default function MaterialsPage() {
       return String(val);
     };
 
-    const baseHeaders = ["SAP Material No.", "SAP Description", "Short Name", "Long Name", "Material Group", "Material Type", "UOM", "Status", "Created"];
+    const baseHeaders = ["SAP Material No.", "SAP Description", "Short Name", "Long Name", "Catalog Number", "Material Group", "Material Type", "UOM", "Status", "Created"];
     const headers = [...baseHeaders, ...attrKeys];
 
     const rows = sortedMaterials.map(m => {
@@ -331,6 +331,7 @@ export default function MaterialsPage() {
         m.sap_name || m.sap_description || "",
         m.short_name || m.item_desc || "",
         m.long_name || "",
+        m.catalog_number || "",
         m.mgrp_code || "",
         m.mat_type_code || "",
         m.uom || "",
@@ -954,6 +955,7 @@ export default function MaterialsPage() {
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('sap_item_id')}>SAP Material Number {getSortIcon('sap_item_id')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('sap_name')}>SAP Description {getSortIcon('sap_name')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('item_long_name')}>Long Name {getSortIcon('item_long_name')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('catalog_number')}>Catalog Number {getSortIcon('catalog_number')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('mgrp_longname')}>Material Group Long Name {getSortIcon('mgrp_longname')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('mgrp_code')}>Material Group Code {getSortIcon('mgrp_code')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Actions</th>
@@ -978,6 +980,7 @@ export default function MaterialsPage() {
                           </td>
                           <td className="px-3 py-2 text-xs text-gray-900">{material.sap_name || "-"}</td>
                           <td className="px-3 py-2 text-xs text-gray-900 max-w-xs break-words whitespace-normal" title={material.long_name || material.notes || ""}>{material.long_name || material.notes || "-"}</td>
+                          <td className="px-3 py-2 text-xs text-gray-900 font-mono whitespace-nowrap">{material.catalog_number || "-"}</td>
                           <td className="px-3 py-2 text-xs text-gray-900">
                             {(() => {
                               const matchedGroup = materialGroups.find(g => g.mgrp_code === material.mgrp_code);
@@ -1045,6 +1048,7 @@ export default function MaterialsPage() {
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('mat_type_desc')}>Material Type {getSortIcon('mat_type_desc')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('item_desc')}>Short Name {getSortIcon('item_desc')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('item_long_name')}>Long Name {getSortIcon('item_long_name')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('catalog_number')}>Catalog Number {getSortIcon('catalog_number')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('search_text')}>Search Text {getSortIcon('search_text')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('created')}>Created {getSortIcon('created')}</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold uppercase cursor-pointer select-none" onClick={() => requestSort('updated')}>Updated {getSortIcon('updated')}</th>
@@ -1068,6 +1072,7 @@ export default function MaterialsPage() {
                           <td className="px-3 py-2 text-xs text-gray-900">{material.mat_type_code || "-"}</td>
                           <td className="px-3 py-2 text-xs text-gray-900">{material.item_desc || material.short_name || "-"}</td>
                           <td className="px-3 py-2 text-xs text-gray-900">{material.notes || material.long_name || "-"}</td>
+                          <td className="px-3 py-2 text-xs text-gray-900 font-mono whitespace-nowrap">{material.catalog_number || "-"}</td>
                           <td className="px-3 py-2 text-xs text-gray-900">{material.search_text || "-"}</td>
                           <td className="px-3 py-2 text-xs text-gray-900">{material.created || "-"}</td>
                           <td className="px-3 py-2 text-xs text-gray-900">{material.updated || "-"}</td>
@@ -1825,6 +1830,13 @@ export default function MaterialsPage() {
                     <label className="block text-xs font-medium text-gray-700 mb-1">Long Name</label>
                     <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900 min-h-[50px] break-words whitespace-normal">
                       {filterHiddenAttributesFromLongNameStr(viewingMaterial.long_name || viewingMaterial.notes, viewingMaterial.attributes || viewMaterialAttributes)}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Catalog Number</label>
+                    <div className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900 font-mono tracking-wider">
+                      {viewingMaterial.catalog_number || "N/A"}
                     </div>
                   </div>
                   

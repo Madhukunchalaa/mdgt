@@ -37,6 +37,7 @@ class ItemMasterSerializer(serializers.ModelSerializer):
             "mgrp_code",
             "mgrp_long_name",
             "attributes",
+            "catalog_number",
             "is_final",
             "item_type",
             "item_number",

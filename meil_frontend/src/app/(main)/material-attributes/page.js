@@ -8,6 +8,7 @@ import { fetchMaterialAttributes, createMaterialAttribute, updateMaterialAttribu
 import {useAuth} from "@/context/AuthContext";
 import SearchableDropdown from "@/components/SearchableDropdown";
 import ViewModal from "@/components/ViewModal";
+import CmtCodeEditor, { validateCmtCodes, pickCodes } from "@/components/CmtCodeEditor";
 import { useSortableData } from "@/hooks/useSortableData";
 
 export default function MaterialAttributesPage() {
@@ -40,11 +41,13 @@ export default function MaterialAttributesPage() {
   const [newAttrHasUOM, setNewAttrHasUOM] = useState(false);
   const [newAttrUnits, setNewAttrUnits] = useState([]);
   const [newAttrUnitInput, setNewAttrUnitInput] = useState("");
+  const [newAttrCodes, setNewAttrCodes] = useState({}); // CMT Code per value
   
   // For editing single attribute
   const [editFormData, setEditFormData] = useState({
     attribute_name: "",
     possible_values: [],
+    cmt_codes: {},
     uom: [],
     print_priority: 0,
     validation: "",
@@ -154,6 +157,7 @@ export default function MaterialAttributesPage() {
     setNewAttrHasUOM(false);
     setNewAttrUnits([]);
     setNewAttrUnitInput("");
+    setNewAttrCodes({});
     setNewAttrValueError("");
     setIsModalOpen(true);
     setError(null);
@@ -178,6 +182,7 @@ export default function MaterialAttributesPage() {
     setEditFormData({
       attribute_name: attribute.attribute_name || "",
       possible_values: attribute.possible_values || [],
+      cmt_codes: attribute.cmt_codes || {},
       uom: uomArray,
       print_priority: attribute.print_priority || 0,
       validation: attribute.validation || "",
@@ -195,6 +200,7 @@ export default function MaterialAttributesPage() {
     setEditFormData({
       attribute_name: "",
       possible_values: [],
+      cmt_codes: {},
       uom: [],
       print_priority: 0,
       validation: "",
@@ -382,9 +388,17 @@ export default function MaterialAttributesPage() {
       }
     }
 
+    // CMT Code is mandatory for every value (2 digits, numbers only)
+    const codeProblems = validateCmtCodes(newAttrValues, newAttrCodes);
+    if (codeProblems.length > 0) {
+      setError(codeProblems[0]);
+      return;
+    }
+
     const newAttr = {
       attribute_name: newAttrName.trim(),
       possible_values: newAttrValues,
+      cmt_codes: pickCodes(newAttrValues, newAttrCodes),
       print_priority: parseInt(newAttrPrintPriority) || 0,
     };
 
@@ -407,6 +421,7 @@ export default function MaterialAttributesPage() {
     setNewAttrName("");
     setNewAttrValues([]);
     setNewAttrValueInput("");
+    setNewAttrCodes({});
     setNewAttrPrintPriority(getNextPriority(formData.mgrp_code, updatedAttrs));
     setNewAttrValidation("");
     setNewAttrHasUOM(false);
@@ -473,9 +488,18 @@ export default function MaterialAttributesPage() {
           return;
         }
 
+        // CMT Code is mandatory for every value (2 digits, numbers only)
+        const editCodeProblems = validateCmtCodes(editFormData.possible_values, editFormData.cmt_codes);
+        if (editCodeProblems.length > 0) {
+          setError(editCodeProblems[0]);
+          setSaving(false);
+          return;
+        }
+
         const dataToSend = {
           attribute_name: editFormData.attribute_name,
           possible_values: editFormData.possible_values,
+          cmt_codes: pickCodes(editFormData.possible_values, editFormData.cmt_codes),
           uom: editHasUOM && uomArray.length > 0 ? (uomArray.length === 1 ? uomArray[0] : uomArray) : null,
           print_priority: editFormData.print_priority || 0,
           validation: editFormData.validation || null,
@@ -549,12 +573,13 @@ export default function MaterialAttributesPage() {
       "mgrp_code": attr.mgrp_code || "",
       "attribute_name": attr.attribute_name || "",
       "possible_values": Array.isArray(attr.possible_values) ? attr.possible_values.join(", ") : (attr.possible_values || ""),
+      "cmt_codes": Array.isArray(attr.possible_values) ? attr.possible_values.map(v => (attr.cmt_codes || {})[v] ?? "").join(", ") : "",
       "uom": Array.isArray(attr.uom) ? attr.uom.join(", ") : (attr.uom || ""),
       "print_priority": attr.print_priority ?? "",
       "validation": attr.validation || "",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [20, 25, 50, 15, 15, 15].map(w => ({ wch: w }));
+    ws["!cols"] = [20, 25, 50, 30, 15, 15, 15].map(w => ({ wch: w }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Attributes");
     const filename = searchTerm ? `attributes_${searchTerm}.xlsx` : "material_attributes.xlsx";
@@ -741,7 +766,7 @@ export default function MaterialAttributesPage() {
                                   key={idx}
                                   className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
                                 >
-                                  {value}
+                                  {value}{attribute.cmt_codes?.[value] ? ` · ${attribute.cmt_codes[value]}` : ""}
                                 </span>
                               ))
                             ) : (
@@ -1108,6 +1133,11 @@ export default function MaterialAttributesPage() {
                         ))}
                       </div>
                     )}
+                    <CmtCodeEditor
+                      values={editFormData.possible_values}
+                      codes={editFormData.cmt_codes}
+                      onChange={(codes) => setEditFormData(prev => ({ ...prev, cmt_codes: codes }))}
+                    />
                   </div>
                   
                   <div>
@@ -1381,6 +1411,11 @@ export default function MaterialAttributesPage() {
                             ))}
                           </div>
                         )}
+                        <CmtCodeEditor
+                          values={newAttrValues}
+                          codes={newAttrCodes}
+                          onChange={setNewAttrCodes}
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">Print Priority</label>
@@ -1628,6 +1663,7 @@ export default function MaterialAttributesPage() {
           mgrp_code: "Material Group Code",
           attribute_name: "Attribute Name",
           possible_values: "Possible Values",
+          cmt_codes: "CMT Codes",
           uom: "Unit of Measure",
           print_priority: "Print Priority",
           validation: "Validation",

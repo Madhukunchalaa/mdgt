@@ -1263,13 +1263,20 @@ export default function MaterialSearchPage() {
                         className="hover:bg-blue-50/50 cursor-pointer transition-colors"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm font-semibold text-blue-600 hover:underline">
-                              {materialCode}
-                            </span>
-                            {isDraft && (
-                              <span className="text-[10px] bg-yellow-100 text-yellow-800 font-medium px-2 py-0.5 rounded border border-yellow-200">
-                                Draft
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-sm font-semibold text-blue-600 hover:underline">
+                                {materialCode}
+                              </span>
+                              {isDraft && (
+                                <span className="text-[10px] bg-yellow-100 text-yellow-800 font-medium px-2 py-0.5 rounded border border-yellow-200">
+                                  Draft
+                                </span>
+                              )}
+                            </div>
+                            {item.catalog_number && (
+                              <span className="font-mono text-xs text-gray-500" title="Catalog Number">
+                                #{item.catalog_number}
                               </span>
                             )}
                           </div>
